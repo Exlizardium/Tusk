@@ -36,7 +36,8 @@ namespace Tusk.Api.Services.Implementations
                 Priority = ticket.Priority,
                 Status = ticket.Status,
                 CreatedAt = ticket.CreatedAt,
-                CustomerId = ticket.CustomerId
+                CustomerId = ticket.CustomerId,
+                AssignedToId = ticket.AssignedToId
             };
         }
 
