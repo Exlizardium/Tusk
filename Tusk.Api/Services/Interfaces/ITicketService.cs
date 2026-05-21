@@ -11,6 +11,10 @@ namespace Tusk.Api.Services.Interfaces
         Task<TicketDto?> UpdateTicketContentAsync(int ticketId, UpdateTicketContentDto dto, string userId);
         Task<TicketDto?> UpdateTicketStatusAsync(int ticketId, UpdateTicketStatusDto dto, string userId);
         Task<TicketDto?> UpdateTicketPriorityAsync(int ticketId, UpdateTicketPriorityDto dto, string userId);
+
         Task<TicketDto?> AssignTicketAsync(int ticketId, AssignTicketDto dto, string userId);
+
+        Task<List<TicketDto>> GetMyTicketsAsync(string userId);
+        Task<List<TicketDto>> GetAssignedTicketsAsync(string userId);
     }
 }

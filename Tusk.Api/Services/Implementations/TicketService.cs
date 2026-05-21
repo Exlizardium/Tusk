@@ -123,5 +123,43 @@ namespace Tusk.Api.Services.Implementations
 
             return MapToDto(ticket);
         }
+
+        public async Task<List<TicketDto>> GetMyTicketsAsync(string userId)
+        {
+            return await _context.Tickets
+                .Where(t => t.CustomerId == userId)
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new TicketDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    Priority = t.Priority,
+                    Status = t.Status,
+                    CreatedAt = t.CreatedAt,
+                    CustomerId = t.CustomerId,
+                    AssignedToId = t.AssignedToId
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<TicketDto>> GetAssignedTicketsAsync(string userId)
+        {
+            return await _context.Tickets
+                .Where(t => t.AssignedToId == userId)
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new TicketDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    Priority = t.Priority,
+                    Status = t.Status,
+                    CreatedAt = t.CreatedAt,
+                    CustomerId = t.CustomerId,
+                    AssignedToId = t.AssignedToId
+                })
+                .ToListAsync();
+        }
     }
 }

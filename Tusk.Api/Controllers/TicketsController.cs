@@ -18,6 +18,11 @@ namespace Tusk.Api.Controllers
             _ticketService = ticketService;
         }
 
+        private string? GetUserId()
+        {
+            return User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -32,10 +37,6 @@ namespace Tusk.Api.Controllers
             if (ticket == null)
                 return NotFound();
             return Ok(ticket);
-        }
-        private string? GetUserId()
-        {
-            return User.FindFirstValue(ClaimTypes.NameIdentifier);
         }
 
         [Authorize]
@@ -105,6 +106,32 @@ namespace Tusk.Api.Controllers
                 return NotFound();
 
             return Ok(updatedTicket);
+        }
+
+        [Authorize]
+        [HttpGet("mine")]
+        public async Task<IActionResult> GetMyTickets()
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var tickets = await _ticketService.GetMyTicketsAsync(userId);
+
+            return Ok(tickets);
+        }
+
+        [Authorize(Roles = "Agent,Admin")]
+        [HttpGet("assigned")]
+        public async Task<IActionResult> GetAssignedTickets()
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var tickets = await _ticketService.GetAssignedTicketsAsync(userId);
+
+            return Ok(tickets);
         }
     }
 }
