@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Tusk.Api.Dtos;
-using Tusk.Api.Services;
+using Tusk.Api.Services.Implementations;
 using Tusk.Api.Services.Interfaces;
 
 namespace Tusk.Api.Controllers
@@ -89,6 +89,21 @@ namespace Tusk.Api.Controllers
             var updatedTicket = await _ticketService.UpdateTicketPriorityAsync(id, dto, userId);
             if (updatedTicket == null)
                 return NotFound();
+            return Ok(updatedTicket);
+        }
+
+        [Authorize(Roles = "Agent,Admin")]
+        [HttpPut("{id}/assign")]
+        public async Task<IActionResult> AssignTicket(int id, [FromBody] AssignTicketDto dto)
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var updatedTicket = await _ticketService.AssignTicketAsync(id, dto, userId);
+            if (updatedTicket == null)
+                return NotFound();
+
             return Ok(updatedTicket);
         }
     }

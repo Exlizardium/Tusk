@@ -1,6 +1,6 @@
 ﻿using Tusk.Api.Models;
 
-namespace Tusk.Api.Dtos
+namespace Tusk.Api.Dtos.Comments
 {
     public class CommentDto
     {

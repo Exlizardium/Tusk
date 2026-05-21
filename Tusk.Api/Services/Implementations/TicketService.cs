@@ -112,5 +112,16 @@ namespace Tusk.Api.Services.Implementations
 
             return MapToDto(ticket);
         }
+
+        public async Task<TicketDto?> AssignTicketAsync(int ticketId, AssignTicketDto dto, string userId)
+        {
+            var ticket = await GetTicketForCustomerAsync(ticketId, userId);
+
+            ticket.AssignedToId = dto.AssignedToId;
+            ticket.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return MapToDto(ticket);
+        }
     }
 }
