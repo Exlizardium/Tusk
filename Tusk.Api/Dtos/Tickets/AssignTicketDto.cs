@@ -1,4 +1,4 @@
-﻿namespace Tusk.Api.Dtos
+﻿namespace Tusk.Api.Dtos.Tickets
 {
     public class AssignTicketDto
     {

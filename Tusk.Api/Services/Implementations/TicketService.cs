@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Tusk.Api.Data;
-using Tusk.Api.Dtos;
+using Tusk.Api.Dtos.Tickets;
 using Tusk.Api.Models;
 using Tusk.Api.Models.Enums;
 using Tusk.Api.Services.Interfaces;
@@ -16,13 +16,10 @@ namespace Tusk.Api.Services.Implementations
             _context = context;
         }
 
-        private async Task<Ticket?> GetTicketForCustomerAsync(int ticketId, string userId)
+        private async Task<Ticket?> LocateTicketAsync(int ticketId)
         {
             var ticket = await _context.Tickets.FindAsync(ticketId);
-
             if (ticket == null) return null;
-            if (ticket.CustomerId != userId) return null;
-
             return ticket;
         }
 
@@ -37,29 +34,37 @@ namespace Tusk.Api.Services.Implementations
                 Status = ticket.Status,
                 CreatedAt = ticket.CreatedAt,
                 CustomerId = ticket.CustomerId,
-                AssignedToId = ticket.AssignedToId
+                AssignedToId = ticket.AssignedToId,
+                ProjectId = ticket.ProjectId
             };
         }
 
-        public async Task<TicketDto> CreateTicketAsync(CreateTicketDto dto, string customerId)
+        public async Task<TicketDto> CreateTicketAsync(int projectId, CreateTicketDto dto, string customerId)
         {
-            var Ticket = new Ticket
+            var projectExists = await _context.Projects
+                .AnyAsync(p => p.Id == projectId);
+
+            if (!projectExists)
+                throw new KeyNotFoundException("Project not found");
+
+            var ticket = new Ticket
             {
                 Title = dto.Title,
                 Description = dto.Description,
                 Priority = dto.Priority,
                 Status = TicketStatus.Open,
                 CreatedAt = DateTime.UtcNow,
-                CustomerId = customerId
+                CustomerId = customerId,
+                ProjectId = projectId
             };
 
-            _context.Tickets.Add(Ticket);
+            _context.Tickets.Add(ticket);
             await _context.SaveChangesAsync();
 
-            return MapToDto(Ticket);
+            return MapToDto(ticket);
         }
 
-        public async Task<List<TicketDto>> GetAllTicketsAsync()
+        public async Task<List<TicketDto>> GetAllTicketsAsync(int projectId)
         {
             return await _context.Tickets
                 .Select(t => new TicketDto
@@ -70,22 +75,26 @@ namespace Tusk.Api.Services.Implementations
                     Priority = t.Priority,
                     Status = t.Status,
                     CreatedAt = t.CreatedAt,
-                    CustomerId = t.CustomerId
+                    CustomerId = t.CustomerId,
+                    AssignedToId = t.AssignedToId,
+                    ProjectId = t.ProjectId
                 })
+                .Where(t => t.ProjectId == projectId)
                 .ToListAsync();
         }
 
-        public async Task<TicketDto?> GetTicketByIdAsync(int ticketId)
+        public async Task<TicketDto?> GetTicketByIdAsync(int projectId, int ticketId)
         {
-            var ticket = await _context.Tickets.FindAsync(ticketId);
+            var ticket = await LocateTicketAsync(ticketId);
             if (ticket == null) return null;
 
             return MapToDto(ticket);
         }
 
-        public async Task<TicketDto?> UpdateTicketContentAsync(int ticketId, UpdateTicketContentDto dto, string userId)
+        public async Task<TicketDto?> UpdateTicketContentAsync(int projectId, int ticketId, UpdateTicketContentDto dto)
         {
-            var ticket = await GetTicketForCustomerAsync(ticketId, userId);
+            var ticket = await LocateTicketAsync(ticketId);
+            if (ticket == null) return null;
 
             ticket.Title = dto.Title;
             ticket.Description = dto.Description;
@@ -94,9 +103,10 @@ namespace Tusk.Api.Services.Implementations
             return MapToDto(ticket);
         }
 
-        public async Task<TicketDto?> UpdateTicketStatusAsync(int ticketId, UpdateTicketStatusDto dto, string userId)
+        public async Task<TicketDto?> UpdateTicketStatusAsync(int projectId, int ticketId, UpdateTicketStatusDto dto)
         {
-            var ticket = await GetTicketForCustomerAsync(ticketId, userId);
+            var ticket = await LocateTicketAsync(ticketId);
+            if (ticket == null) return null;
 
             ticket.Status = dto.Status;
             await _context.SaveChangesAsync();
@@ -104,9 +114,10 @@ namespace Tusk.Api.Services.Implementations
             return MapToDto(ticket);
         }
 
-        public async Task<TicketDto?> UpdateTicketPriorityAsync(int ticketId, UpdateTicketPriorityDto dto, string userId)
+        public async Task<TicketDto?> UpdateTicketPriorityAsync(int projectId, int ticketId, UpdateTicketPriorityDto dto)
         {
-            var ticket = await GetTicketForCustomerAsync(ticketId, userId);
+            var ticket = await LocateTicketAsync(ticketId);
+            if (ticket == null) return null;
 
             ticket.Priority = dto.Priority;
             await _context.SaveChangesAsync();
@@ -114,11 +125,36 @@ namespace Tusk.Api.Services.Implementations
             return MapToDto(ticket);
         }
 
-        public async Task<TicketDto?> AssignTicketAsync(int ticketId, AssignTicketDto dto, string userId)
+        public async Task<TicketDto?> AssignTicketAsync(int projectId, int ticketId, AssignTicketDto dto)
         {
-            var ticket = await GetTicketForCustomerAsync(ticketId, userId);
+            var ticket = await LocateTicketAsync(ticketId);
+            if (ticket == null) return null;
 
             ticket.AssignedToId = dto.AssignedToId;
+            ticket.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return MapToDto(ticket);
+        }
+
+        public async Task<TicketDto?> TakeTicketAsync(int projectId, int ticketId, string userId)
+        {
+            var ticket = await LocateTicketAsync(ticketId);
+            if (ticket == null) return null;
+
+            ticket.AssignedToId = userId;
+            ticket.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return MapToDto(ticket);
+        }
+
+        public async Task<TicketDto?> UnassignTicketAsync(int projectId, int ticketId)
+        {
+            var ticket = await LocateTicketAsync(ticketId);
+            if (ticket == null) return null;
+
+            ticket.AssignedToId = null;
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -139,7 +175,8 @@ namespace Tusk.Api.Services.Implementations
                     Status = t.Status,
                     CreatedAt = t.CreatedAt,
                     CustomerId = t.CustomerId,
-                    AssignedToId = t.AssignedToId
+                    AssignedToId = t.AssignedToId,
+                    ProjectId = t.ProjectId
                 })
                 .ToListAsync();
         }
@@ -158,7 +195,8 @@ namespace Tusk.Api.Services.Implementations
                     Status = t.Status,
                     CreatedAt = t.CreatedAt,
                     CustomerId = t.CustomerId,
-                    AssignedToId = t.AssignedToId
+                    AssignedToId = t.AssignedToId,
+                    ProjectId = t.ProjectId
                 })
                 .ToListAsync();
         }

@@ -12,15 +12,39 @@ namespace Tusk.Api.Data
 
         public DbSet<Ticket> Tickets { get; set; } = null!;
         public DbSet<Comment> Comments { get; set; } = null!;
+        public DbSet<Project> Projects { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
+            builder.Entity<Project>(entity =>
+            {
+                entity.Property(p => p.Name)
+                    .HasMaxLength(200)
+                    .IsRequired();
+
+                entity.HasIndex(p => p.Name)
+                    .IsUnique();
+
+                entity.Property(p => p.Description)
+                    .HasMaxLength(250);
+
+                entity.HasMany(p => p.Tickets)
+                    .WithOne(t => t.Project)
+                    .HasForeignKey(t => t.ProjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(p => p.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(p => p.CreatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             builder.Entity<Ticket>(entity =>
             {
                 entity.Property(t => t.Title)
-                    .HasMaxLength(50)
+                    .HasMaxLength(200)
                     .IsRequired();
 
                 entity.Property(t => t.Status)

@@ -1,6 +1,6 @@
 ﻿using Tusk.Api.Models.Enums;
 
-namespace Tusk.Api.Dtos
+namespace Tusk.Api.Dtos.Tickets
 {
     public class TicketDto
     {
@@ -16,5 +16,7 @@ namespace Tusk.Api.Dtos
 
         public string CustomerId { get; set; } = null!;
         public string? AssignedToId { get; set; }
+
+        public int ProjectId { get; set; }
     }
 }

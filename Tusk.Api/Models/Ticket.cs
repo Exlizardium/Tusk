@@ -21,6 +21,9 @@ namespace Tusk.Api.Models
         public string? AssignedToId { get; set; }
         public ApplicationUser? AssignedTo { get; set; }
 
+        public int ProjectId { get; set; }
+        public Project Project { get; set; } = null!;
+
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     }

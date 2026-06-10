@@ -1,6 +1,6 @@
 ﻿using Tusk.Api.Models.Enums;
 
-namespace Tusk.Api.Dtos
+namespace Tusk.Api.Dtos.Tickets
 {
     public class UpdateTicketPriorityDto
     {

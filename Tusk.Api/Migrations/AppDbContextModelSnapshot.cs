@@ -257,6 +257,40 @@ namespace Tusk.Api.Migrations
                     b.ToTable("Comments");
                 });
 
+            modelBuilder.Entity("Tusk.Api.Models.Project", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedById")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Projects");
+                });
+
             modelBuilder.Entity("Tusk.Api.Models.Ticket", b =>
                 {
                     b.Property<int>("Id")
@@ -281,13 +315,16 @@ namespace Tusk.Api.Migrations
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
 
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -297,6 +334,8 @@ namespace Tusk.Api.Migrations
                     b.HasIndex("AssignedToId");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("ProjectId");
 
                     b.ToTable("Tickets");
                 });
@@ -371,6 +410,17 @@ namespace Tusk.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Tusk.Api.Models.Project", b =>
+                {
+                    b.HasOne("Tusk.Api.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+                });
+
             modelBuilder.Entity("Tusk.Api.Models.Ticket", b =>
                 {
                     b.HasOne("Tusk.Api.Models.ApplicationUser", "AssignedTo")
@@ -384,9 +434,22 @@ namespace Tusk.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Tusk.Api.Models.Project", "Project")
+                        .WithMany("Tickets")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("AssignedTo");
 
                     b.Navigation("Customer");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("Tusk.Api.Models.Project", b =>
+                {
+                    b.Navigation("Tickets");
                 });
 
             modelBuilder.Entity("Tusk.Api.Models.Ticket", b =>
