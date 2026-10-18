@@ -24,6 +24,7 @@ namespace Tusk.Api.Controllers
             return User.FindFirstValue(ClaimTypes.NameIdentifier);
         }
 
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAll(int projectId)
         {
@@ -32,6 +33,7 @@ namespace Tusk.Api.Controllers
             return Ok(tickets);
         }
 
+        [Authorize]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int projectId, int id)
         {

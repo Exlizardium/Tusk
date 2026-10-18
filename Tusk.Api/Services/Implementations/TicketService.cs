@@ -16,9 +16,10 @@ namespace Tusk.Api.Services.Implementations
             _context = context;
         }
 
-        private async Task<Ticket?> LocateTicketAsync(int ticketId)
+        private async Task<Ticket?> LocateTicketAsync(int projectId, int ticketId)
         {
-            var ticket = await _context.Tickets.FindAsync(ticketId);
+            var ticket = await _context.Tickets
+                .FirstOrDefaultAsync(t => t.Id == ticketId && t.ProjectId == projectId);
             if (ticket == null) return null;
             return ticket;
         }
@@ -85,7 +86,7 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<TicketDto?> GetTicketByIdAsync(int projectId, int ticketId)
         {
-            var ticket = await LocateTicketAsync(ticketId);
+            var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
             return MapToDto(ticket);
@@ -93,7 +94,7 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<TicketDto?> UpdateTicketContentAsync(int projectId, int ticketId, UpdateTicketContentDto dto)
         {
-            var ticket = await LocateTicketAsync(ticketId);
+            var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
             ticket.Title = dto.Title;
@@ -105,7 +106,7 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<TicketDto?> UpdateTicketStatusAsync(int projectId, int ticketId, UpdateTicketStatusDto dto)
         {
-            var ticket = await LocateTicketAsync(ticketId);
+            var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
             ticket.Status = dto.Status;
@@ -116,7 +117,7 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<TicketDto?> UpdateTicketPriorityAsync(int projectId, int ticketId, UpdateTicketPriorityDto dto)
         {
-            var ticket = await LocateTicketAsync(ticketId);
+            var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
             ticket.Priority = dto.Priority;
@@ -127,7 +128,7 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<TicketDto?> AssignTicketAsync(int projectId, int ticketId, AssignTicketDto dto)
         {
-            var ticket = await LocateTicketAsync(ticketId);
+            var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
             ticket.AssignedToId = dto.AssignedToId;
@@ -139,7 +140,7 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<TicketDto?> TakeTicketAsync(int projectId, int ticketId, string userId)
         {
-            var ticket = await LocateTicketAsync(ticketId);
+            var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
             ticket.AssignedToId = userId;
@@ -151,7 +152,7 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<TicketDto?> UnassignTicketAsync(int projectId, int ticketId)
         {
-            var ticket = await LocateTicketAsync(ticketId);
+            var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
             ticket.AssignedToId = null;

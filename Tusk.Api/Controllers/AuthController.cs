@@ -14,10 +14,12 @@ namespace Tusk.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
-        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration)
+        public AuthController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IConfiguration configuration)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
             _configuration = configuration;
         }
 
@@ -54,9 +56,12 @@ namespace Tusk.Api.Controllers
             if (user == null)
                 return Unauthorized("Invalid email or password.");
 
-            var passwordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
 
-            if (!passwordValid)
+            if (result.IsLockedOut)
+                return StatusCode(StatusCodes.Status423Locked, "Account locked due to too many failed login attempts. Try again later.");
+
+            if (!result.Succeeded)
                 return Unauthorized("Invalid email or password.");
 
             var token = await GenerateJwtTokenAsync(user);
@@ -66,7 +71,7 @@ namespace Tusk.Api.Controllers
 
         private async Task<AuthResponseDto> GenerateJwtTokenAsync(ApplicationUser user)
         {
-            var roles = _userManager.GetRolesAsync(user).Result;
+            var roles = await _userManager.GetRolesAsync(user);
 
             var claims = new List<Claim>
             {
