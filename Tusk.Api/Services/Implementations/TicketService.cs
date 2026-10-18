@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
 using Tusk.Api.Data;
 using Tusk.Api.Dtos.Common;
 using Tusk.Api.Dtos.Tickets;
@@ -25,21 +26,20 @@ namespace Tusk.Api.Services.Implementations
             return ticket;
         }
 
-        private static TicketDto MapToDto(Ticket ticket)
+        private static readonly Expression<Func<Ticket, TicketDto>> ToDtoExpression = ticket => new TicketDto
         {
-            return new TicketDto
-            {
-                Id = ticket.Id,
-                Title = ticket.Title,
-                Description = ticket.Description,
-                Priority = ticket.Priority,
-                Status = ticket.Status,
-                CreatedAt = ticket.CreatedAt,
-                CustomerId = ticket.CustomerId,
-                AssignedToId = ticket.AssignedToId,
-                ProjectId = ticket.ProjectId
-            };
-        }
+            Id = ticket.Id,
+            Title = ticket.Title,
+            Description = ticket.Description,
+            Priority = ticket.Priority,
+            Status = ticket.Status,
+            CreatedAt = ticket.CreatedAt,
+            CustomerId = ticket.CustomerId,
+            AssignedToId = ticket.AssignedToId,
+            ProjectId = ticket.ProjectId
+        };
+
+        private static readonly Func<Ticket, TicketDto> MapToDto = ToDtoExpression.Compile();
 
         public async Task<TicketDto> CreateTicketAsync(int projectId, CreateTicketDto dto, string customerId)
         {
@@ -88,18 +88,7 @@ namespace Tusk.Api.Services.Implementations
                 .OrderByDescending(t => t.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(t => new TicketDto
-                {
-                    Id = t.Id,
-                    Title = t.Title,
-                    Description = t.Description,
-                    Priority = t.Priority,
-                    Status = t.Status,
-                    CreatedAt = t.CreatedAt,
-                    CustomerId = t.CustomerId,
-                    AssignedToId = t.AssignedToId,
-                    ProjectId = t.ProjectId
-                })
+                .Select(ToDtoExpression)
                 .ToListAsync();
 
             return new PagedResultDto<TicketDto>
@@ -194,18 +183,7 @@ namespace Tusk.Api.Services.Implementations
             return await _context.Tickets
                 .Where(t => t.CustomerId == userId)
                 .OrderByDescending(t => t.CreatedAt)
-                .Select(t => new TicketDto
-                {
-                    Id = t.Id,
-                    Title = t.Title,
-                    Description = t.Description,
-                    Priority = t.Priority,
-                    Status = t.Status,
-                    CreatedAt = t.CreatedAt,
-                    CustomerId = t.CustomerId,
-                    AssignedToId = t.AssignedToId,
-                    ProjectId = t.ProjectId
-                })
+                .Select(ToDtoExpression)
                 .ToListAsync();
         }
 
@@ -214,18 +192,7 @@ namespace Tusk.Api.Services.Implementations
             return await _context.Tickets
                 .Where(t => t.AssignedToId == userId)
                 .OrderByDescending(t => t.CreatedAt)
-                .Select(t => new TicketDto
-                {
-                    Id = t.Id,
-                    Title = t.Title,
-                    Description = t.Description,
-                    Priority = t.Priority,
-                    Status = t.Status,
-                    CreatedAt = t.CreatedAt,
-                    CustomerId = t.CustomerId,
-                    AssignedToId = t.AssignedToId,
-                    ProjectId = t.ProjectId
-                })
+                .Select(ToDtoExpression)
                 .ToListAsync();
         }
     }
