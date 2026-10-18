@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Tusk.Api.Data;
 using Tusk.Api.Dtos.Admin;
 using Tusk.Api.Dtos.Common;
 using Tusk.Api.Models;
@@ -15,11 +16,13 @@ namespace Tusk.Api.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly AppDbContext _context;
 
-        public AdminController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+        public AdminController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, AppDbContext context)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _context = context;
         }
 
         [HttpPost("assign-role")]
@@ -62,20 +65,25 @@ namespace Tusk.Api.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
-            var usersWithRoles = new List<UsersWithRolesDto>();
+            var userIds = users.Select(u => u.Id).ToList();
 
-            foreach (var user in users)
+            var rolesByUserId = (await _context.UserRoles
+                    .Where(ur => userIds.Contains(ur.UserId))
+                    .Join(_context.Roles,
+                        ur => ur.RoleId,
+                        r => r.Id,
+                        (ur, r) => new { ur.UserId, RoleName = r.Name! })
+                    .ToListAsync())
+                .GroupBy(x => x.UserId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.RoleName).ToList());
+
+            var usersWithRoles = users.Select(user => new UsersWithRolesDto
             {
-                var roles = await _userManager.GetRolesAsync(user);
-
-                usersWithRoles.Add(new UsersWithRolesDto
-                {
-                    Id = user.Id,
-                    FullName = $"{user.FirstName} {user.LastName}",
-                    Email = user.Email!,
-                    Roles = roles.ToList()
-                });
-            }
+                Id = user.Id,
+                FullName = $"{user.FirstName} {user.LastName}",
+                Email = user.Email!,
+                Roles = rolesByUserId.TryGetValue(user.Id, out var roles) ? roles : new List<string>()
+            }).ToList();
 
             var result = new PagedResultDto<UsersWithRolesDto>
             {
