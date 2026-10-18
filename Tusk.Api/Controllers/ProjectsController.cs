@@ -24,6 +24,11 @@ namespace Tusk.Api.Controllers
             return User.FindFirstValue(ClaimTypes.NameIdentifier);
         }
 
+        private bool IsAdmin()
+        {
+            return User.IsInRole("Admin");
+        }
+
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetProjects()
@@ -57,6 +62,16 @@ namespace Tusk.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectDto dto)
         {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var existing = await _projectService.GetProjectByIdAsync(id);
+            if (existing == null) return NotFound();
+
+            if (existing.CreatedById != userId && !IsAdmin())
+                return Forbid();
+
             var updatedProject = await _projectService.UpdateProjectAsync(id, dto);
             if (updatedProject == null) return NotFound();
             return Ok(updatedProject);
@@ -66,6 +81,16 @@ namespace Tusk.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var existing = await _projectService.GetProjectByIdAsync(id);
+            if (existing == null) return NotFound();
+
+            if (existing.CreatedById != userId && !IsAdmin())
+                return Forbid();
+
             var deleted = await _projectService.DeleteProjectAsync(id);
             if (!deleted) return NotFound();
 

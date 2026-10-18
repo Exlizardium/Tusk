@@ -24,6 +24,11 @@ namespace Tusk.Api.Controllers
             return User.FindFirstValue(ClaimTypes.NameIdentifier);
         }
 
+        private bool IsAgentOrAdmin()
+        {
+            return User.IsInRole("Agent") || User.IsInRole("Admin");
+        }
+
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAll(int projectId)
@@ -65,6 +70,12 @@ namespace Tusk.Api.Controllers
             var userId = GetUserId();
             if (userId == null)
                 return Unauthorized();
+
+            var existing = await _ticketService.GetTicketByIdAsync(projectId, id);
+            if (existing == null) return NotFound();
+
+            if (existing.CustomerId != userId && !IsAgentOrAdmin())
+                return Forbid();
 
             var updatedTicket = await _ticketService.UpdateTicketContentAsync(projectId, id, dto);
             if (updatedTicket == null)
