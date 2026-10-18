@@ -17,7 +17,7 @@ namespace Tusk.Api.Services.Interfaces
         Task<TicketDto?> TakeTicketAsync(int projectId, int ticketId, string userId);
         Task<TicketDto?> UnassignTicketAsync(int projectId, int ticketId);
 
-        Task<List<TicketDto>> GetMyTicketsAsync(string userId);
-        Task<List<TicketDto>> GetAssignedTicketsAsync(string userId);
+        Task<PagedResultDto<TicketDto>> GetMyTicketsAsync(string userId, TicketQueryParams query);
+        Task<PagedResultDto<TicketDto>> GetAssignedTicketsAsync(string userId, TicketQueryParams query);
     }
 }

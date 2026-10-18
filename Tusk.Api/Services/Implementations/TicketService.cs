@@ -66,25 +66,23 @@ namespace Tusk.Api.Services.Implementations
             return MapToDto(ticket);
         }
 
-        public async Task<PagedResultDto<TicketDto>> GetAllTicketsAsync(int projectId, TicketQueryParams query)
+        private static async Task<PagedResultDto<TicketDto>> ToPagedResultAsync(IQueryable<Ticket> source, TicketQueryParams query)
         {
             var page = Math.Max(1, query.Page);
             var pageSize = Math.Clamp(query.PageSize, 1, 100);
 
-            var filtered = _context.Tickets.Where(t => t.ProjectId == projectId);
-
             if (query.Status.HasValue)
-                filtered = filtered.Where(t => t.Status == query.Status.Value);
+                source = source.Where(t => t.Status == query.Status.Value);
 
             if (query.Priority.HasValue)
-                filtered = filtered.Where(t => t.Priority == query.Priority.Value);
+                source = source.Where(t => t.Priority == query.Priority.Value);
 
             if (!string.IsNullOrEmpty(query.AssignedToId))
-                filtered = filtered.Where(t => t.AssignedToId == query.AssignedToId);
+                source = source.Where(t => t.AssignedToId == query.AssignedToId);
 
-            var totalCount = await filtered.CountAsync();
+            var totalCount = await source.CountAsync();
 
-            var items = await filtered
+            var items = await source
                 .OrderByDescending(t => t.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -98,6 +96,11 @@ namespace Tusk.Api.Services.Implementations
                 PageSize = pageSize,
                 TotalCount = totalCount
             };
+        }
+
+        public async Task<PagedResultDto<TicketDto>> GetAllTicketsAsync(int projectId, TicketQueryParams query)
+        {
+            return await ToPagedResultAsync(_context.Tickets.Where(t => t.ProjectId == projectId), query);
         }
 
         public async Task<TicketDto?> GetTicketByIdAsync(int projectId, int ticketId)
@@ -178,22 +181,14 @@ namespace Tusk.Api.Services.Implementations
             return MapToDto(ticket);
         }
 
-        public async Task<List<TicketDto>> GetMyTicketsAsync(string userId)
+        public async Task<PagedResultDto<TicketDto>> GetMyTicketsAsync(string userId, TicketQueryParams query)
         {
-            return await _context.Tickets
-                .Where(t => t.CustomerId == userId)
-                .OrderByDescending(t => t.CreatedAt)
-                .Select(ToDtoExpression)
-                .ToListAsync();
+            return await ToPagedResultAsync(_context.Tickets.Where(t => t.CustomerId == userId), query);
         }
 
-        public async Task<List<TicketDto>> GetAssignedTicketsAsync(string userId)
+        public async Task<PagedResultDto<TicketDto>> GetAssignedTicketsAsync(string userId, TicketQueryParams query)
         {
-            return await _context.Tickets
-                .Where(t => t.AssignedToId == userId)
-                .OrderByDescending(t => t.CreatedAt)
-                .Select(ToDtoExpression)
-                .ToListAsync();
+            return await ToPagedResultAsync(_context.Tickets.Where(t => t.AssignedToId == userId), query);
         }
     }
 }

@@ -25,26 +25,26 @@ namespace Tusk.Api.Controllers
 
         [Authorize]
         [HttpGet("mine")]
-        public async Task<IActionResult> GetMyTickets()
+        public async Task<IActionResult> GetMyTickets([FromQuery] TicketQueryParams query)
         {
             var userId = GetUserId();
             if (userId == null)
                 return Unauthorized();
 
-            var tickets = await _ticketService.GetMyTicketsAsync(userId);
+            var tickets = await _ticketService.GetMyTicketsAsync(userId, query);
 
             return Ok(tickets);
         }
 
         [Authorize(Roles = "Agent,Admin")]
         [HttpGet("assigned")]
-        public async Task<IActionResult> GetAssignedTickets()
+        public async Task<IActionResult> GetAssignedTickets([FromQuery] TicketQueryParams query)
         {
             var userId = GetUserId();
             if (userId == null)
                 return Unauthorized();
 
-            var tickets = await _ticketService.GetAssignedTicketsAsync(userId);
+            var tickets = await _ticketService.GetAssignedTicketsAsync(userId, query);
 
             return Ok(tickets);
         }
