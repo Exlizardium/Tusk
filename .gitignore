@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Local AI assistant notes (not shared via git)
+CLAUDE.md

@@ -37,6 +37,9 @@ namespace Tusk.Api.Services.Implementations
         public async Task<ProjectDto?> GetProjectByIdAsync(int projectId)
         {
             var project = await LocateProjectAsync(projectId);
+
+            if (project == null) return null;
+
             return MapToDto(project);
         }
 
@@ -64,6 +67,8 @@ namespace Tusk.Api.Services.Implementations
         {
             var project = await LocateProjectAsync(projectId);
 
+            if (project == null) return null;
+
             project.Name = dto.Name;
             project.Description = dto.Description;
 
@@ -74,6 +79,9 @@ namespace Tusk.Api.Services.Implementations
         public async Task<bool> DeleteProjectAsync(int projectId)
         {
             var project = await LocateProjectAsync(projectId);
+
+            if (project == null) return false;
+
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();
             return true;

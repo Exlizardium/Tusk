@@ -33,8 +33,10 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<CommentDto?> CreateCommentAsync(CreateCommentDto dto, string userId, int ticketId)
         {
-            var ticketExists = await _context.Tickets.AnyAsync(t => t.Id == ticketId);
-            if (!ticketExists) throw new Exception("Ticket not found");
+            if (await _context.Tickets.AnyAsync(t => t.Id == ticketId) == false)
+            {
+                return null;
+            }
 
             var comment = new Comment
             {

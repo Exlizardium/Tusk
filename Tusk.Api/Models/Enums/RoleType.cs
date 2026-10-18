@@ -2,8 +2,8 @@
 {
     public enum RoleType
     {
-        Admin,
-        User,
-        Manager
+        Customer,
+        Agent,
+        Admin
     }
 }

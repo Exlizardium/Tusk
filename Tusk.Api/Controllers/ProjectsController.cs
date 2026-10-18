@@ -19,6 +19,11 @@ namespace Tusk.Api.Controllers
             _projectService = projectService;
         }
 
+        private string? GetUserId()
+        {
+            return User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetProjects()
@@ -38,8 +43,12 @@ namespace Tusk.Api.Controllers
 
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> CreateProject([FromBody] CreateProjectDto dto, string userId)
+        public async Task<IActionResult> CreateProject([FromBody] CreateProjectDto dto)
         {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
             var project = await _projectService.CreateProjectAsync(dto, userId);
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
         }
@@ -57,9 +66,10 @@ namespace Tusk.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
-            var targetProject = await _projectService.DeleteProjectAsync(id);
-            
-            return Ok(targetProject);
+            var deleted = await _projectService.DeleteProjectAsync(id);
+            if (!deleted) return NotFound();
+
+            return NoContent();
         }
     }
 }
