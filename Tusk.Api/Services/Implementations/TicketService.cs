@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Tusk.Api.Data;
+using Tusk.Api.Dtos.Common;
 using Tusk.Api.Dtos.Tickets;
 using Tusk.Api.Models;
 using Tusk.Api.Models.Enums;
@@ -65,9 +66,28 @@ namespace Tusk.Api.Services.Implementations
             return MapToDto(ticket);
         }
 
-        public async Task<List<TicketDto>> GetAllTicketsAsync(int projectId)
+        public async Task<PagedResultDto<TicketDto>> GetAllTicketsAsync(int projectId, TicketQueryParams query)
         {
-            return await _context.Tickets
+            var page = Math.Max(1, query.Page);
+            var pageSize = Math.Clamp(query.PageSize, 1, 100);
+
+            var filtered = _context.Tickets.Where(t => t.ProjectId == projectId);
+
+            if (query.Status.HasValue)
+                filtered = filtered.Where(t => t.Status == query.Status.Value);
+
+            if (query.Priority.HasValue)
+                filtered = filtered.Where(t => t.Priority == query.Priority.Value);
+
+            if (!string.IsNullOrEmpty(query.AssignedToId))
+                filtered = filtered.Where(t => t.AssignedToId == query.AssignedToId);
+
+            var totalCount = await filtered.CountAsync();
+
+            var items = await filtered
+                .OrderByDescending(t => t.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(t => new TicketDto
                 {
                     Id = t.Id,
@@ -80,8 +100,15 @@ namespace Tusk.Api.Services.Implementations
                     AssignedToId = t.AssignedToId,
                     ProjectId = t.ProjectId
                 })
-                .Where(t => t.ProjectId == projectId)
                 .ToListAsync();
+
+            return new PagedResultDto<TicketDto>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            };
         }
 
         public async Task<TicketDto?> GetTicketByIdAsync(int projectId, int ticketId)

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Tusk.Api.Data;
+using Tusk.Api.Dtos.Common;
 using Tusk.Api.Dtos.Projects;
 using Tusk.Api.Models;
 using Tusk.Api.Services.Interfaces;
@@ -43,10 +44,26 @@ namespace Tusk.Api.Services.Implementations
             return MapToDto(project);
         }
 
-        public async Task<List<ProjectDto>> GetAllProjectsAsync()
+        public async Task<PagedResultDto<ProjectDto>> GetAllProjectsAsync(ProjectQueryParams query)
         {
-            var projects = await _context.Projects.ToListAsync();
-            return projects.Select(MapToDto).ToList();
+            var page = Math.Max(1, query.Page);
+            var pageSize = Math.Clamp(query.PageSize, 1, 100);
+
+            var totalCount = await _context.Projects.CountAsync();
+
+            var projects = await _context.Projects
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PagedResultDto<ProjectDto>
+            {
+                Items = projects.Select(MapToDto).ToList(),
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            };
         }
 
         public async Task<ProjectDto> CreateProjectAsync(CreateProjectDto dto, string userId)

@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Tusk.Api.Dtos.Admin;
+using Tusk.Api.Dtos.Common;
 using Tusk.Api.Models;
 
 namespace Tusk.Api.Controllers
@@ -47,9 +49,19 @@ namespace Tusk.Api.Controllers
         }
 
         [HttpGet("users-with-roles")]
-        public async Task<IActionResult> GetUsersWithRoles()
+        public async Task<IActionResult> GetUsersWithRoles([FromQuery] UserQueryParams query)
         {
-            var users = _userManager.Users.ToList();
+            var page = Math.Max(1, query.Page);
+            var pageSize = Math.Clamp(query.PageSize, 1, 100);
+
+            var totalCount = await _userManager.Users.CountAsync();
+
+            var users = await _userManager.Users
+                .OrderBy(u => u.Email)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
             var usersWithRoles = new List<UsersWithRolesDto>();
 
             foreach (var user in users)
@@ -65,7 +77,15 @@ namespace Tusk.Api.Controllers
                 });
             }
 
-            return Ok(usersWithRoles);
+            var result = new PagedResultDto<UsersWithRolesDto>
+            {
+                Items = usersWithRoles,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            };
+
+            return Ok(result);
         }
     }
 }

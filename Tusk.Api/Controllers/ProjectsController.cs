@@ -31,9 +31,9 @@ namespace Tusk.Api.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<IActionResult> GetProjects()
+        public async Task<IActionResult> GetProjects([FromQuery] ProjectQueryParams query)
         {
-            var projects = await _projectService.GetAllProjectsAsync();
+            var projects = await _projectService.GetAllProjectsAsync(query);
             return Ok(projects);
         }
 

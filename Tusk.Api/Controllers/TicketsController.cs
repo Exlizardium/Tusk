@@ -31,9 +31,9 @@ namespace Tusk.Api.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<IActionResult> GetAll(int projectId)
+        public async Task<IActionResult> GetAll(int projectId, [FromQuery] TicketQueryParams query)
         {
-            var tickets = await _ticketService.GetAllTicketsAsync(projectId);
+            var tickets = await _ticketService.GetAllTicketsAsync(projectId, query);
 
             return Ok(tickets);
         }
