@@ -48,6 +48,22 @@ namespace Tusk.Api.Tests.Infrastructure
             });
         }
 
+        public async Task<T> SeedAsync<T>(T entity) where T : class
+        {
+            using var scope = Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            context.Add(entity);
+            await context.SaveChangesAsync();
+            return entity;
+        }
+
+        public async Task<TResult> QueryAsync<TResult>(Func<AppDbContext, Task<TResult>> query)
+        {
+            using var scope = Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            return await query(context);
+        }
+
         public async Task<ApplicationUser> AddUserAsync(string role)
         {
             using var scope = Services.CreateScope();
