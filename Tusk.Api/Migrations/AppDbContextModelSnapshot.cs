@@ -244,6 +244,9 @@ namespace Tusk.Api.Migrations
                     b.Property<int>("TicketId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text");

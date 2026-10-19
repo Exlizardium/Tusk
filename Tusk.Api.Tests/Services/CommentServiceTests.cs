@@ -105,6 +105,107 @@ namespace Tusk.Api.Tests.Services
         }
 
         [Fact]
+        public async Task CreateCommentAsync_ReturnsCommentWithNoUpdatedAt()
+        {
+            var customer = await _db.AddUserAsync();
+            var ticket = await AddTicketAsync(customer.Id);
+
+            await using var context = _db.CreateContext();
+            var created = await new CommentService(context).CreateCommentAsync(
+                new CreateCommentDto { Message = "Hi" }, customer.Id, ticket.Id);
+
+            Assert.Null(created!.UpdatedAt);
+        }
+
+        [Fact]
+        public async Task GetCommentAsync_ReturnsComment_OnlyThroughItsOwnTicket()
+        {
+            var customer = await _db.AddUserAsync();
+            var ticket = await AddTicketAsync(customer.Id);
+            var otherTicket = await AddTicketAsync(customer.Id);
+            var comment = await AddCommentAsync(ticket.Id, customer.Id, "Hi", DateTime.UtcNow);
+
+            await using var context = _db.CreateContext();
+            var service = new CommentService(context);
+
+            Assert.Equal("Hi", (await service.GetCommentAsync(ticket.Id, comment.Id))!.Message);
+            Assert.Null(await service.GetCommentAsync(otherTicket.Id, comment.Id));
+        }
+
+        [Fact]
+        public async Task UpdateCommentAsync_PersistsMessage_AndSetsUpdatedAt()
+        {
+            var customer = await _db.AddUserAsync();
+            var ticket = await AddTicketAsync(customer.Id);
+            var comment = await AddCommentAsync(ticket.Id, customer.Id, "Original", DateTime.UtcNow);
+            var before = DateTime.UtcNow;
+
+            await using (var context = _db.CreateContext())
+            {
+                await new CommentService(context).UpdateCommentAsync(ticket.Id, comment.Id, new UpdateCommentDto { Message = "Edited" });
+            }
+
+            await using var verify = _db.CreateContext();
+            var saved = await verify.Comments.SingleAsync();
+            Assert.Equal("Edited", saved.Message);
+            Assert.NotNull(saved.UpdatedAt);
+            Assert.InRange(saved.UpdatedAt.Value, before, DateTime.UtcNow);
+        }
+
+        [Fact]
+        public async Task UpdateCommentAsync_ReturnsNull_AndChangesNothing_ThroughAnotherTicket()
+        {
+            var customer = await _db.AddUserAsync();
+            var ticket = await AddTicketAsync(customer.Id);
+            var otherTicket = await AddTicketAsync(customer.Id);
+            var comment = await AddCommentAsync(ticket.Id, customer.Id, "Original", DateTime.UtcNow);
+
+            await using (var context = _db.CreateContext())
+            {
+                Assert.Null(await new CommentService(context).UpdateCommentAsync(
+                    otherTicket.Id, comment.Id, new UpdateCommentDto { Message = "Hijacked" }));
+            }
+
+            await using var verify = _db.CreateContext();
+            var saved = await verify.Comments.SingleAsync();
+            Assert.Equal("Original", saved.Message);
+            Assert.Null(saved.UpdatedAt);
+        }
+
+        [Fact]
+        public async Task DeleteCommentAsync_RemovesComment_AndReturnsTrue()
+        {
+            var customer = await _db.AddUserAsync();
+            var ticket = await AddTicketAsync(customer.Id);
+            var comment = await AddCommentAsync(ticket.Id, customer.Id, "Bye", DateTime.UtcNow);
+
+            await using (var context = _db.CreateContext())
+            {
+                Assert.True(await new CommentService(context).DeleteCommentAsync(ticket.Id, comment.Id));
+            }
+
+            await using var verify = _db.CreateContext();
+            Assert.False(await verify.Comments.AnyAsync());
+        }
+
+        [Fact]
+        public async Task DeleteCommentAsync_ReturnsFalse_AndKeepsComment_ThroughAnotherTicket()
+        {
+            var customer = await _db.AddUserAsync();
+            var ticket = await AddTicketAsync(customer.Id);
+            var otherTicket = await AddTicketAsync(customer.Id);
+            var comment = await AddCommentAsync(ticket.Id, customer.Id, "Stay", DateTime.UtcNow);
+
+            await using (var context = _db.CreateContext())
+            {
+                Assert.False(await new CommentService(context).DeleteCommentAsync(otherTicket.Id, comment.Id));
+            }
+
+            await using var verify = _db.CreateContext();
+            Assert.True(await verify.Comments.AnyAsync());
+        }
+
+        [Fact]
         public async Task CreateCommentAsync_ReturnsNull_AndSavesNothing_WhenTicketDoesNotExist()
         {
             var user = await _db.AddUserAsync();

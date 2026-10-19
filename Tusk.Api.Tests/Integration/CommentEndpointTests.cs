@@ -16,7 +16,7 @@ namespace Tusk.Api.Tests.Integration
         private async Task<Ticket> SeedTicketAsync(string customerId)
         {
             var admin = await _factory.AddUserAsync("Admin");
-            var project = await _factory.SeedProjectAsync(admin.Id);
+            var project = await _factory.SeedProjectAsync(admin.Id, $"Project {Guid.NewGuid():N}");
             return await _factory.SeedTicketAsync(project.Id, customerId);
         }
 
@@ -122,6 +122,146 @@ namespace Tusk.Api.Tests.Integration
 
             Assert.True(response.IsSuccessStatusCode, $"Expected success, got {(int)response.StatusCode}");
             Assert.Equal(agent.Id, await _factory.QueryAsync(db => db.Comments.Select(c => c.UserId).SingleAsync()));
+        }
+
+        [Fact]
+        public async Task UpdateComment_Returns200_ForAuthor_AndMarksEdited()
+        {
+            var customer = await _factory.LoginAsNewUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, customer.Id, "Original");
+
+            var response = await customer.Client.PutAsJsonAsync(
+                $"/api/tickets/{ticket.Id}/comments/{comment.Id}", new UpdateCommentDto { Message = "Edited" });
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var updated = await response.Content.ReadFromJsonAsync<CommentDto>();
+            Assert.Equal("Edited", updated!.Message);
+            Assert.NotNull(updated.UpdatedAt);
+        }
+
+        [Theory]
+        [InlineData("Agent")]
+        [InlineData("Admin")]
+        public async Task UpdateComment_Returns403_ForNonAuthorStaff(string role)
+        {
+            var customer = await _factory.AddUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, customer.Id, "Original");
+            var staff = await _factory.LoginAsNewUserAsync(role);
+
+            var response = await staff.Client.PutAsJsonAsync(
+                $"/api/tickets/{ticket.Id}/comments/{comment.Id}", new UpdateCommentDto { Message = "Rewritten" });
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal("Original", await _factory.QueryAsync(db => db.Comments.Select(c => c.Message).SingleAsync()));
+        }
+
+        [Fact]
+        public async Task UpdateComment_Returns403_ForTicketOwner_OnAgentsComment()
+        {
+            var customer = await _factory.LoginAsNewUserAsync("Customer");
+            var agent = await _factory.AddUserAsync("Agent");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, agent.Id, "We'll look into it");
+
+            var response = await customer.Client.PutAsJsonAsync(
+                $"/api/tickets/{ticket.Id}/comments/{comment.Id}", new UpdateCommentDto { Message = "Fixed for free" });
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task UpdateComment_Returns404_ThroughAnotherTicket()
+        {
+            var customer = await _factory.LoginAsNewUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var otherTicket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, customer.Id, "Original");
+
+            var response = await customer.Client.PutAsJsonAsync(
+                $"/api/tickets/{otherTicket.Id}/comments/{comment.Id}", new UpdateCommentDto { Message = "Edited" });
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task UpdateComment_Returns400_WhenMessageEmpty()
+        {
+            var customer = await _factory.LoginAsNewUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, customer.Id, "Original");
+
+            var response = await customer.Client.PutAsJsonAsync(
+                $"/api/tickets/{ticket.Id}/comments/{comment.Id}", new UpdateCommentDto { Message = "" });
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeleteComment_Returns204_ForAuthor()
+        {
+            var customer = await _factory.LoginAsNewUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, customer.Id, "Oops");
+
+            var response = await customer.Client.DeleteAsync($"/api/tickets/{ticket.Id}/comments/{comment.Id}");
+
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            Assert.False(await _factory.QueryAsync(db => db.Comments.AnyAsync()));
+        }
+
+        [Fact]
+        public async Task DeleteComment_Returns204_ForAdmin_OnSomeoneElsesComment()
+        {
+            var customer = await _factory.AddUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, customer.Id, "Abusive");
+            var admin = await _factory.LoginAsNewUserAsync("Admin");
+
+            var response = await admin.Client.DeleteAsync($"/api/tickets/{ticket.Id}/comments/{comment.Id}");
+
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            Assert.False(await _factory.QueryAsync(db => db.Comments.AnyAsync()));
+        }
+
+        [Fact]
+        public async Task DeleteComment_Returns403_ForAgent_OnCustomersComment()
+        {
+            var customer = await _factory.AddUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, customer.Id, "Complaint");
+            var agent = await _factory.LoginAsNewUserAsync("Agent");
+
+            var response = await agent.Client.DeleteAsync($"/api/tickets/{ticket.Id}/comments/{comment.Id}");
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.True(await _factory.QueryAsync(db => db.Comments.AnyAsync()));
+        }
+
+        [Fact]
+        public async Task DeleteComment_Returns403_ForTicketOwner_OnAgentsComment()
+        {
+            var customer = await _factory.LoginAsNewUserAsync("Customer");
+            var agent = await _factory.AddUserAsync("Agent");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, agent.Id, "Please send logs");
+
+            var response = await customer.Client.DeleteAsync($"/api/tickets/{ticket.Id}/comments/{comment.Id}");
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.True(await _factory.QueryAsync(db => db.Comments.AnyAsync()));
+        }
+
+        [Fact]
+        public async Task DeleteComment_Returns404_WhenCommentDoesNotExist()
+        {
+            var customer = await _factory.LoginAsNewUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+
+            var response = await customer.Client.DeleteAsync($"/api/tickets/{ticket.Id}/comments/999");
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
         [Fact]

@@ -11,5 +11,6 @@ namespace Tusk.Api.Dtos.Comments
 
         public string Message { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }

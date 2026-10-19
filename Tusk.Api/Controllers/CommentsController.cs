@@ -78,5 +78,57 @@ namespace Tusk.Api.Controllers
 
             return Ok(createdComment);
         }
+
+        [Authorize]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateComment(int ticketId, int id, [FromBody] UpdateCommentDto dto)
+        {
+            var userId = GetUserId();
+
+            var existing = await _commentService.GetCommentAsync(ticketId, id);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            if (existing.UserId != userId)
+            {
+                return Forbid();
+            }
+
+            var updatedComment = await _commentService.UpdateCommentAsync(ticketId, id, dto);
+            if (updatedComment == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(updatedComment);
+        }
+
+        [Authorize]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteComment(int ticketId, int id)
+        {
+            var userId = GetUserId();
+
+            var existing = await _commentService.GetCommentAsync(ticketId, id);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            if (existing.UserId != userId && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            var deleted = await _commentService.DeleteCommentAsync(ticketId, id);
+            if (!deleted)
+            {
+                return NotFound();
+            }
+
+            return NoContent();
+        }
     }
 }
