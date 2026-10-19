@@ -98,9 +98,14 @@ namespace Tusk.Api.Services.Implementations
             };
         }
 
-        public async Task<PagedResultDto<TicketDto>> GetAllTicketsAsync(int projectId, TicketQueryParams query)
+        public async Task<PagedResultDto<TicketDto>> GetAllTicketsAsync(int projectId, TicketQueryParams query, string? customerId)
         {
-            return await ToPagedResultAsync(_context.Tickets.Where(t => t.ProjectId == projectId), query);
+            var source = _context.Tickets.Where(t => t.ProjectId == projectId);
+
+            if (customerId != null)
+                source = source.Where(t => t.CustomerId == customerId);
+
+            return await ToPagedResultAsync(source, query);
         }
 
         public async Task<TicketDto?> GetTicketByIdAsync(int projectId, int ticketId)

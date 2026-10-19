@@ -35,6 +35,23 @@ namespace Tusk.Api.Tests.Services
         }
 
         [Fact]
+        public async Task GetTicketCustomerIdAsync_ReturnsReportingCustomer()
+        {
+            var customer = await _db.AddUserAsync();
+            var ticket = await AddTicketAsync(customer.Id);
+
+            await using var context = _db.CreateContext();
+            Assert.Equal(customer.Id, await new CommentService(context).GetTicketCustomerIdAsync(ticket.Id));
+        }
+
+        [Fact]
+        public async Task GetTicketCustomerIdAsync_ReturnsNull_WhenTicketDoesNotExist()
+        {
+            await using var context = _db.CreateContext();
+            Assert.Null(await new CommentService(context).GetTicketCustomerIdAsync(999));
+        }
+
+        [Fact]
         public async Task GetCommentsForTicketAsync_ReturnsOnlyThatTicketsComments_OldestFirst()
         {
             var customer = await _db.AddUserAsync();

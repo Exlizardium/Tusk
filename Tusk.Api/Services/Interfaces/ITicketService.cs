@@ -6,7 +6,7 @@ namespace Tusk.Api.Services.Interfaces
     public interface ITicketService
     {
         Task<TicketDto> CreateTicketAsync(int projectId, CreateTicketDto dto, string userId);
-        Task<PagedResultDto<TicketDto>> GetAllTicketsAsync(int projectId, TicketQueryParams query);
+        Task<PagedResultDto<TicketDto>> GetAllTicketsAsync(int projectId, TicketQueryParams query, string? customerId);
         Task<TicketDto?> GetTicketByIdAsync(int projectId, int ticketId);
 
         Task<TicketDto?> UpdateTicketContentAsync(int projectId, int ticketId, UpdateTicketContentDto dto);

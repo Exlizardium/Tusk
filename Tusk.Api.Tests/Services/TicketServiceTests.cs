@@ -240,7 +240,7 @@ namespace Tusk.Api.Tests.Services
             await _db.AddTicketAsync(beta.Id, customer.Id, "Beta", createdAt: start.AddDays(2));
 
             await using var context = _db.CreateContext();
-            var result = await new TicketService(context).GetAllTicketsAsync(alpha.Id, new TicketQueryParams());
+            var result = await new TicketService(context).GetAllTicketsAsync(alpha.Id, new TicketQueryParams(), customerId: null);
 
             Assert.Equal(["Alpha new", "Alpha old"], result.Items.Select(t => t.Title));
             Assert.Equal(2, result.TotalCount);
@@ -259,7 +259,7 @@ namespace Tusk.Api.Tests.Services
 
             await using var context = _db.CreateContext();
             var result = await new TicketService(context)
-                .GetAllTicketsAsync(project.Id, new TicketQueryParams { Page = 2, PageSize = 2 });
+                .GetAllTicketsAsync(project.Id, new TicketQueryParams { Page = 2, PageSize = 2 }, customerId: null);
 
             Assert.Equal(["Ticket 3", "Ticket 2"], result.Items.Select(t => t.Title));
             Assert.Equal(5, result.TotalCount);
@@ -276,7 +276,7 @@ namespace Tusk.Api.Tests.Services
 
             await using var context = _db.CreateContext();
             var result = await new TicketService(context)
-                .GetAllTicketsAsync(project.Id, new TicketQueryParams { Page = page, PageSize = pageSize });
+                .GetAllTicketsAsync(project.Id, new TicketQueryParams { Page = page, PageSize = pageSize }, customerId: null);
 
             Assert.Equal(expectedPage, result.Page);
             Assert.Equal(expectedPageSize, result.PageSize);
@@ -299,9 +299,26 @@ namespace Tusk.Api.Tests.Services
                 Status = TicketStatus.InProgress,
                 Priority = TicketPriority.High,
                 AssignedToId = agent.Id
-            });
+            }, customerId: null);
 
             Assert.Equal("Match", Assert.Single(result.Items).Title);
+            Assert.Equal(1, result.TotalCount);
+        }
+
+        [Fact]
+        public async Task GetAllTicketsAsync_ReturnsOnlyCustomersOwnTickets_WhenCustomerFilterGiven()
+        {
+            var me = await _db.AddUserAsync("Me", "Customer");
+            var someoneElse = await _db.AddUserAsync("Other", "Customer");
+            var project = await _db.AddProjectAsync("Alpha", me.Id);
+            await _db.AddTicketAsync(project.Id, me.Id, "Mine");
+            await _db.AddTicketAsync(project.Id, someoneElse.Id, "Not mine");
+
+            await using var context = _db.CreateContext();
+            var result = await new TicketService(context)
+                .GetAllTicketsAsync(project.Id, new TicketQueryParams(), customerId: me.Id);
+
+            Assert.Equal("Mine", Assert.Single(result.Items).Title);
             Assert.Equal(1, result.TotalCount);
         }
 

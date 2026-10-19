@@ -15,6 +15,14 @@ namespace Tusk.Api.Services.Implementations
             _context = context;
         }
 
+        public async Task<string?> GetTicketCustomerIdAsync(int ticketId)
+        {
+            return await _context.Tickets
+                .Where(t => t.Id == ticketId)
+                .Select(t => t.CustomerId)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<List<CommentDto>> GetCommentsForTicketAsync(int ticketId)
         {
             return await _context.Comments

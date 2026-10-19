@@ -4,6 +4,7 @@ namespace Tusk.Api.Services.Interfaces
 {
     public interface ICommentService
     {
+        Task<string?> GetTicketCustomerIdAsync(int ticketId);
         Task<List<CommentDto>> GetCommentsForTicketAsync(int ticketId);
         Task<CommentDto?> CreateCommentAsync(CreateCommentDto dto, string userId, int ticketId);
     }

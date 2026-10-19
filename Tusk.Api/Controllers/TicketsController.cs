@@ -33,7 +33,12 @@ namespace Tusk.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll(int projectId, [FromQuery] TicketQueryParams query)
         {
-            var tickets = await _ticketService.GetAllTicketsAsync(projectId, query);
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var customerFilter = IsAgentOrAdmin() ? null : userId;
+            var tickets = await _ticketService.GetAllTicketsAsync(projectId, query, customerFilter);
 
             return Ok(tickets);
         }
@@ -42,10 +47,17 @@ namespace Tusk.Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int projectId, int id)
         {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
             var ticket = await _ticketService.GetTicketByIdAsync(projectId, id);
 
             if (ticket == null)
                 return NotFound();
+
+            if (ticket.CustomerId != userId && !IsAgentOrAdmin())
+                return Forbid();
 
             return Ok(ticket);
         }
