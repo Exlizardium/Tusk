@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Tusk.slnx
+
+      - name: Build
+        run: dotnet build Tusk.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Tusk.slnx --configuration Release --no-build --verbosity normal
