@@ -173,6 +173,34 @@ namespace Tusk.Api.Tests.Services
             Assert.Equal(TicketPriority.Critical, (await ReloadTicketAsync(ticket.Id)).Priority);
         }
 
+        [Theory]
+        [InlineData("content")]
+        [InlineData("status")]
+        [InlineData("priority")]
+        public async Task FieldUpdates_SetUpdatedAt_ToCurrentTime(string operation)
+        {
+            var customer = await _db.AddUserAsync();
+            var project = await _db.AddProjectAsync("Alpha", customer.Id);
+            var ticket = await _db.AddTicketAsync(project.Id, customer.Id);
+            var before = DateTime.UtcNow;
+
+            await using (var context = _db.CreateContext())
+            {
+                var service = new TicketService(context);
+                _ = operation switch
+                {
+                    "content" => await service.UpdateTicketContentAsync(project.Id, ticket.Id, new UpdateTicketContentDto { Title = "Edited" }),
+                    "status" => await service.UpdateTicketStatusAsync(project.Id, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.Solved }),
+                    "priority" => await service.UpdateTicketPriorityAsync(project.Id, ticket.Id, new UpdateTicketPriorityDto { Priority = TicketPriority.High }),
+                    _ => throw new ArgumentOutOfRangeException(nameof(operation))
+                };
+            }
+
+            var updatedAt = (await ReloadTicketAsync(ticket.Id)).UpdatedAt;
+            Assert.NotNull(updatedAt);
+            Assert.InRange(updatedAt.Value, before, DateTime.UtcNow);
+        }
+
         [Fact]
         public async Task AssignTicketAsync_SetsAssignee_AndUpdatedAt()
         {

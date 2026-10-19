@@ -123,6 +123,7 @@ namespace Tusk.Api.Services.Implementations
 
             ticket.Title = dto.Title;
             ticket.Description = dto.Description;
+            ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             return MapToDto(ticket);
@@ -134,6 +135,7 @@ namespace Tusk.Api.Services.Implementations
             if (ticket == null) return null;
 
             ticket.Status = dto.Status;
+            ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             return MapToDto(ticket);
@@ -145,6 +147,7 @@ namespace Tusk.Api.Services.Implementations
             if (ticket == null) return null;
 
             ticket.Priority = dto.Priority;
+            ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             return MapToDto(ticket);
