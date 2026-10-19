@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Tusk.Api.Dtos.Tickets;
@@ -13,10 +14,12 @@ namespace Tusk.Api.Controllers
     public class TicketsController : ControllerBase
     {
         private readonly ITicketService _ticketService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public TicketsController(ITicketService ticketService)
+        public TicketsController(ITicketService ticketService, UserManager<ApplicationUser> userManager)
         {
             _ticketService = ticketService;
+            _userManager = userManager;
         }
 
         private string? GetUserId()
@@ -130,6 +133,13 @@ namespace Tusk.Api.Controllers
             var userId = GetUserId();
             if (userId == null)
                 return Unauthorized();
+
+            var assignee = await _userManager.FindByIdAsync(dto.AssignedToId);
+            if (assignee == null)
+                return BadRequest("Assignee not found");
+
+            if (!await _userManager.IsInRoleAsync(assignee, "Agent") && !await _userManager.IsInRoleAsync(assignee, "Admin"))
+                return BadRequest("Assignee must be an Agent or Admin");
 
             var updatedTicket = await _ticketService.AssignTicketAsync(projectId, id, dto);
             if (updatedTicket == null)
