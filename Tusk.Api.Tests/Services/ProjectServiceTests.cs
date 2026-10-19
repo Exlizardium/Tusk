@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Tusk.Api.Dtos.Projects;
-using Tusk.Api.Models;
 using Tusk.Api.Services.Implementations;
 using Tusk.Api.Tests.Infrastructure;
 
@@ -12,26 +11,11 @@ namespace Tusk.Api.Tests.Services
 
         public void Dispose() => _db.Dispose();
 
-        private async Task<Project> AddProjectAsync(string name, string createdById, DateTime? createdAt = null)
-        {
-            var project = new Project
-            {
-                Name = name,
-                CreatedById = createdById,
-                CreatedAt = createdAt ?? DateTime.UtcNow
-            };
-
-            await using var context = _db.CreateContext();
-            context.Projects.Add(project);
-            await context.SaveChangesAsync();
-            return project;
-        }
-
         [Fact]
         public async Task GetProjectByIdAsync_ReturnsProject_WhenItExists()
         {
             var user = await _db.AddUserAsync();
-            var project = await AddProjectAsync("Alpha", user.Id);
+            var project = await _db.AddProjectAsync("Alpha", user.Id);
 
             await using var context = _db.CreateContext();
             var result = await new ProjectService(context).GetProjectByIdAsync(project.Id);
@@ -57,7 +41,7 @@ namespace Tusk.Api.Tests.Services
             var start = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             for (var i = 1; i <= 5; i++)
             {
-                await AddProjectAsync($"Project {i}", user.Id, start.AddDays(i));
+                await _db.AddProjectAsync($"Project {i}", user.Id, start.AddDays(i));
             }
 
             await using var context = _db.CreateContext();
@@ -104,7 +88,7 @@ namespace Tusk.Api.Tests.Services
         public async Task CreateProjectAsync_Throws_WhenNameAlreadyExists()
         {
             var user = await _db.AddUserAsync();
-            await AddProjectAsync("Alpha", user.Id);
+            await _db.AddProjectAsync("Alpha", user.Id);
 
             await using var context = _db.CreateContext();
             await Assert.ThrowsAsync<DbUpdateException>(() =>
@@ -115,7 +99,7 @@ namespace Tusk.Api.Tests.Services
         public async Task UpdateProjectAsync_PersistsChanges()
         {
             var user = await _db.AddUserAsync();
-            var project = await AddProjectAsync("Alpha", user.Id);
+            var project = await _db.AddProjectAsync("Alpha", user.Id);
 
             await using (var context = _db.CreateContext())
             {
@@ -143,7 +127,7 @@ namespace Tusk.Api.Tests.Services
         public async Task DeleteProjectAsync_RemovesProject_AndReturnsTrue()
         {
             var user = await _db.AddUserAsync();
-            var project = await AddProjectAsync("Alpha", user.Id);
+            var project = await _db.AddProjectAsync("Alpha", user.Id);
 
             await using (var context = _db.CreateContext())
             {

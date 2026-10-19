@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Tusk.Api.Data;
 using Tusk.Api.Models;
+using Tusk.Api.Models.Enums;
 
 namespace Tusk.Api.Tests.Infrastructure
 {
@@ -38,6 +39,47 @@ namespace Tusk.Api.Tests.Infrastructure
             context.Users.Add(user);
             await context.SaveChangesAsync();
             return user;
+        }
+
+        public async Task<Project> AddProjectAsync(string name, string createdById, DateTime? createdAt = null)
+        {
+            var project = new Project
+            {
+                Name = name,
+                CreatedById = createdById,
+                CreatedAt = createdAt ?? DateTime.UtcNow
+            };
+
+            await using var context = CreateContext();
+            context.Projects.Add(project);
+            await context.SaveChangesAsync();
+            return project;
+        }
+
+        public async Task<Ticket> AddTicketAsync(
+            int projectId,
+            string customerId,
+            string title = "Ticket",
+            TicketStatus status = TicketStatus.Open,
+            TicketPriority priority = TicketPriority.Medium,
+            string? assignedToId = null,
+            DateTime? createdAt = null)
+        {
+            var ticket = new Ticket
+            {
+                Title = title,
+                Status = status,
+                Priority = priority,
+                CustomerId = customerId,
+                AssignedToId = assignedToId,
+                ProjectId = projectId,
+                CreatedAt = createdAt ?? DateTime.UtcNow
+            };
+
+            await using var context = CreateContext();
+            context.Tickets.Add(ticket);
+            await context.SaveChangesAsync();
+            return ticket;
         }
 
         public void Dispose() => _connection.Dispose();
