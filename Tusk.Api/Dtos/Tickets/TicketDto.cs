@@ -13,6 +13,7 @@ namespace Tusk.Api.Dtos.Tickets
         public TicketPriority Priority { get; set; }
 
         public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
 
         public string CustomerId { get; set; } = null!;
         public string? AssignedToId { get; set; }

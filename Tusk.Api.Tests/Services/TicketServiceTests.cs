@@ -202,6 +202,40 @@ namespace Tusk.Api.Tests.Services
         }
 
         [Fact]
+        public async Task UpdatedAt_IsReturned_FromUpdateAndFromListQuery()
+        {
+            var customer = await _db.AddUserAsync();
+            var project = await _db.AddProjectAsync("Alpha", customer.Id);
+            var ticket = await _db.AddTicketAsync(project.Id, customer.Id);
+
+            TicketDto? updated;
+            await using (var context = _db.CreateContext())
+            {
+                updated = await new TicketService(context).UpdateTicketStatusAsync(
+                    project.Id, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.Solved });
+            }
+
+            await using var verify = _db.CreateContext();
+            var listed = await new TicketService(verify).GetAllTicketsAsync(project.Id, new TicketQueryParams(), customerId: null);
+
+            Assert.NotNull(updated!.UpdatedAt);
+            Assert.Equal(updated.UpdatedAt, Assert.Single(listed.Items).UpdatedAt);
+        }
+
+        [Fact]
+        public async Task UpdatedAt_IsNull_ForNeverModifiedTicket()
+        {
+            var customer = await _db.AddUserAsync();
+            var project = await _db.AddProjectAsync("Alpha", customer.Id);
+            var ticket = await _db.AddTicketAsync(project.Id, customer.Id);
+
+            await using var context = _db.CreateContext();
+            var result = await new TicketService(context).GetTicketByIdAsync(project.Id, ticket.Id);
+
+            Assert.Null(result!.UpdatedAt);
+        }
+
+        [Fact]
         public async Task AssignTicketAsync_SetsAssignee_AndUpdatedAt()
         {
             var customer = await _db.AddUserAsync();
