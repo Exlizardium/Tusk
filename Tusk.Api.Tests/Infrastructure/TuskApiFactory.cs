@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Tusk.Api.Data;
 using Tusk.Api.Dtos.Auth;
 using Tusk.Api.Models;
+using Tusk.Api.Models.Enums;
 
 namespace Tusk.Api.Tests.Infrastructure
 {
@@ -63,6 +64,21 @@ namespace Tusk.Api.Tests.Infrastructure
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             return await query(context);
         }
+
+        public Task<Project> SeedProjectAsync(string createdById, string name = "Alpha") =>
+            SeedAsync(new Project { Name = name, CreatedById = createdById, CreatedAt = DateTime.UtcNow });
+
+        public Task<Ticket> SeedTicketAsync(int projectId, string customerId, string title = "Ticket", string? assignedToId = null) =>
+            SeedAsync(new Ticket
+            {
+                Title = title,
+                Status = TicketStatus.Open,
+                Priority = TicketPriority.Medium,
+                CustomerId = customerId,
+                AssignedToId = assignedToId,
+                ProjectId = projectId,
+                CreatedAt = DateTime.UtcNow
+            });
 
         public async Task<ApplicationUser> AddUserAsync(string role)
         {

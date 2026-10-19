@@ -2,8 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Tusk.Api.Dtos.Projects;
-using Tusk.Api.Models;
-using Tusk.Api.Models.Enums;
 using Tusk.Api.Tests.Infrastructure;
 
 namespace Tusk.Api.Tests.Integration
@@ -14,25 +12,11 @@ namespace Tusk.Api.Tests.Integration
 
         public void Dispose() => _factory.Dispose();
 
-        private Task<Project> SeedProjectAsync(string createdById, string name = "Alpha") =>
-            _factory.SeedAsync(new Project { Name = name, CreatedById = createdById, CreatedAt = DateTime.UtcNow });
-
-        private Task<Ticket> SeedTicketAsync(int projectId, string customerId) =>
-            _factory.SeedAsync(new Ticket
-            {
-                Title = "Ticket",
-                Status = TicketStatus.Open,
-                Priority = TicketPriority.Medium,
-                CustomerId = customerId,
-                ProjectId = projectId,
-                CreatedAt = DateTime.UtcNow
-            });
-
         [Fact]
         public async Task GetProjects_IsVisibleToCustomers()
         {
             var admin = await _factory.AddUserAsync("Admin");
-            await SeedProjectAsync(admin.Id);
+            await _factory.SeedProjectAsync(admin.Id);
             var customer = await _factory.LoginAsNewUserAsync("Customer");
 
             var response = await customer.Client.GetAsync("/api/projects");
@@ -81,7 +65,7 @@ namespace Tusk.Api.Tests.Integration
         public async Task UpdateProject_Returns403_ForNonAdmins(string role)
         {
             var admin = await _factory.AddUserAsync("Admin");
-            var project = await SeedProjectAsync(admin.Id);
+            var project = await _factory.SeedProjectAsync(admin.Id);
             var user = await _factory.LoginAsNewUserAsync(role);
 
             var response = await user.Client.PutAsJsonAsync($"/api/projects/{project.Id}", new UpdateProjectDto { Name = "Hijacked" });
@@ -94,7 +78,7 @@ namespace Tusk.Api.Tests.Integration
         public async Task UpdateProject_Returns200_ForAnyAdmin_NotJustCreator()
         {
             var creator = await _factory.AddUserAsync("Admin");
-            var project = await SeedProjectAsync(creator.Id);
+            var project = await _factory.SeedProjectAsync(creator.Id);
             var otherAdmin = await _factory.LoginAsNewUserAsync("Admin");
 
             var response = await otherAdmin.Client.PutAsJsonAsync($"/api/projects/{project.Id}", new UpdateProjectDto { Name = "Beta" });
@@ -120,8 +104,8 @@ namespace Tusk.Api.Tests.Integration
         {
             var admin = await _factory.AddUserAsync("Admin");
             var otherCustomer = await _factory.AddUserAsync("Customer");
-            var project = await SeedProjectAsync(admin.Id);
-            await SeedTicketAsync(project.Id, otherCustomer.Id);
+            var project = await _factory.SeedProjectAsync(admin.Id);
+            await _factory.SeedTicketAsync(project.Id, otherCustomer.Id);
             var user = await _factory.LoginAsNewUserAsync(role);
 
             var response = await user.Client.DeleteAsync($"/api/projects/{project.Id}");
@@ -135,8 +119,8 @@ namespace Tusk.Api.Tests.Integration
         {
             var customer = await _factory.LoginAsNewUserAsync("Customer");
             var otherCustomer = await _factory.AddUserAsync("Customer");
-            var legacyProject = await SeedProjectAsync(customer.Id);
-            await SeedTicketAsync(legacyProject.Id, otherCustomer.Id);
+            var legacyProject = await _factory.SeedProjectAsync(customer.Id);
+            await _factory.SeedTicketAsync(legacyProject.Id, otherCustomer.Id);
 
             var response = await customer.Client.DeleteAsync($"/api/projects/{legacyProject.Id}");
 
@@ -149,8 +133,8 @@ namespace Tusk.Api.Tests.Integration
         {
             var customer = await _factory.AddUserAsync("Customer");
             var creator = await _factory.AddUserAsync("Admin");
-            var project = await SeedProjectAsync(creator.Id);
-            await SeedTicketAsync(project.Id, customer.Id);
+            var project = await _factory.SeedProjectAsync(creator.Id);
+            await _factory.SeedTicketAsync(project.Id, customer.Id);
             var admin = await _factory.LoginAsNewUserAsync("Admin");
 
             var response = await admin.Client.DeleteAsync($"/api/projects/{project.Id}");

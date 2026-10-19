@@ -75,7 +75,7 @@ namespace Tusk.Api.Controllers
 
             var createdTicket = await _ticketService.CreateTicketAsync(projectId, dto, userId);
 
-            return CreatedAtAction(nameof(GetById), new { id = createdTicket.Id }, createdTicket);
+            return CreatedAtAction(nameof(GetById), new { projectId, id = createdTicket.Id }, createdTicket);
         }
 
         [Authorize]
