@@ -1,0 +1,9 @@
+bin/
+obj/
+Ap/
+Dockerfile
+.dockerignore
+*.csproj.user
+*.http
+Properties/launchSettings.json
+appsettings.Development.json
