@@ -1,3 +1,5 @@
+x-db-connection: &db-connection Host=postgres;Port=5432;Database=tuskdb;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable
+
 services:
   postgres:
     image: postgres:18
@@ -15,14 +17,26 @@ services:
       timeout: 3s
       retries: 10
 
-  api:
-    build: ./Tusk.Api
-    image: tusk-api
+  migrate:
+    build:
+      context: ./Tusk.Api
+      target: migrations
+    image: tusk-migrate
     depends_on:
       postgres:
         condition: service_healthy
+    command: ["--connection", *db-connection]
+
+  api:
+    build:
+      context: ./Tusk.Api
+      target: runtime
+    image: tusk-api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     environment:
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=tuskdb;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__DefaultConnection: *db-connection
       Jwt__Key: ${JWT_KEY:?set JWT_KEY in .env}
     ports:
       - "8080:8080"
