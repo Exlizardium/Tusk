@@ -15,5 +15,17 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    build: ./Tusk.Api
+    image: tusk-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=tuskdb;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Jwt__Key: ${JWT_KEY:?set JWT_KEY in .env}
+    ports:
+      - "8080:8080"
+
 volumes:
   postgres-data:
