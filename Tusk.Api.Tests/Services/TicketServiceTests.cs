@@ -105,7 +105,7 @@ namespace Tusk.Api.Tests.Services
                 var result = operation switch
                 {
                     "get" => await service.GetTicketByIdAsync(wrongProjectId, ticket.Id),
-                    "content" => await service.UpdateTicketContentAsync(wrongProjectId, ticket.Id, new UpdateTicketContentDto { Title = "Hijacked" }),
+                    "content" => await service.UpdateTicketContentAsync(wrongProjectId, ticket.Id, new UpdateTicketContentDto { Title = "Hijacked", Version = 1 }),
                     "status" => await service.UpdateTicketStatusAsync(wrongProjectId, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.Closed }),
                     "priority" => await service.UpdateTicketPriorityAsync(wrongProjectId, ticket.Id, new UpdateTicketPriorityDto { Priority = TicketPriority.Critical }),
                     "assign" => await service.AssignTicketAsync(wrongProjectId, ticket.Id, new AssignTicketDto { AssignedToId = customer.Id }),
@@ -220,12 +220,36 @@ namespace Tusk.Api.Tests.Services
             await using (var context = _db.CreateContext())
             {
                 await new TicketService(context).UpdateTicketContentAsync(
-                    project.Id, ticket.Id, new UpdateTicketContentDto { Title = "Edited", Description = "More detail" });
+                    project.Id, ticket.Id, new UpdateTicketContentDto { Title = "Edited", Description = "More detail", Version = 1 });
             }
 
             var saved = await ReloadTicketAsync(ticket.Id);
             Assert.Equal("Edited", saved.Title);
             Assert.Equal("More detail", saved.Description);
+        }
+
+        [Fact]
+        public async Task UpdateTicketContentAsync_Throws_AndChangesNothing_WhenClientVersionIsStale()
+        {
+            var customer = await _db.AddUserAsync();
+            var project = await _db.AddProjectAsync("Alpha", customer.Id);
+            var ticket = await _db.AddTicketAsync(project.Id, customer.Id, "Original");
+
+            await using (var context = _db.CreateContext())
+            {
+                (await context.Tickets.SingleAsync()).Priority = TicketPriority.High;
+                await context.SaveChangesAsync();
+            }
+
+            await using (var context = _db.CreateContext())
+            {
+                await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => new TicketService(context).UpdateTicketContentAsync(
+                    project.Id, ticket.Id, new UpdateTicketContentDto { Title = "Stale edit", Version = 1 }));
+            }
+
+            var saved = await ReloadTicketAsync(ticket.Id);
+            Assert.Equal("Original", saved.Title);
+            Assert.Equal(2, saved.Version);
         }
 
         [Fact]
@@ -276,7 +300,7 @@ namespace Tusk.Api.Tests.Services
                 var service = new TicketService(context);
                 _ = operation switch
                 {
-                    "content" => await service.UpdateTicketContentAsync(project.Id, ticket.Id, new UpdateTicketContentDto { Title = "Edited" }),
+                    "content" => await service.UpdateTicketContentAsync(project.Id, ticket.Id, new UpdateTicketContentDto { Title = "Edited", Version = 1 }),
                     "status" => await service.UpdateTicketStatusAsync(project.Id, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.InProgress }),
                     "priority" => await service.UpdateTicketPriorityAsync(project.Id, ticket.Id, new UpdateTicketPriorityDto { Priority = TicketPriority.High }),
                     _ => throw new ArgumentOutOfRangeException(nameof(operation))

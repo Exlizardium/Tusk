@@ -10,5 +10,8 @@ namespace Tusk.Api.Dtos.Projects
 
         [MaxLength(250)]
         public string? Description { get; set; }
+
+        [Required]
+        public int? Version { get; set; }
     }
 }

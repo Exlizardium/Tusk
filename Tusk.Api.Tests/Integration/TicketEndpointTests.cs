@@ -150,7 +150,7 @@ namespace Tusk.Api.Tests.Integration
             var ticket = await _factory.SeedTicketAsync(project.Id, customer.Id, "Original");
 
             var response = await customer.Client.PutAsJsonAsync(
-                $"/api/projects/{project.Id}/tickets/{ticket.Id}/content", new UpdateTicketContentDto { Title = "Edited" });
+                $"/api/projects/{project.Id}/tickets/{ticket.Id}/content", new UpdateTicketContentDto { Title = "Edited", Version = 1 });
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("Edited", (await ReloadTicketAsync(ticket.Id)).Title);
@@ -165,7 +165,7 @@ namespace Tusk.Api.Tests.Integration
             var otherCustomer = await _factory.LoginAsNewUserAsync("Customer");
 
             var response = await otherCustomer.Client.PutAsJsonAsync(
-                $"/api/projects/{project.Id}/tickets/{ticket.Id}/content", new UpdateTicketContentDto { Title = "Hijacked" });
+                $"/api/projects/{project.Id}/tickets/{ticket.Id}/content", new UpdateTicketContentDto { Title = "Hijacked", Version = 1 });
 
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
             Assert.Equal("Original", (await ReloadTicketAsync(ticket.Id)).Title);
@@ -180,7 +180,7 @@ namespace Tusk.Api.Tests.Integration
             var agent = await _factory.LoginAsNewUserAsync("Agent");
 
             var response = await agent.Client.PutAsJsonAsync(
-                $"/api/projects/{project.Id}/tickets/{ticket.Id}/content", new UpdateTicketContentDto { Title = "Clarified" });
+                $"/api/projects/{project.Id}/tickets/{ticket.Id}/content", new UpdateTicketContentDto { Title = "Clarified", Version = 1 });
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("Clarified", (await ReloadTicketAsync(ticket.Id)).Title);

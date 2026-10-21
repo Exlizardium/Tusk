@@ -57,6 +57,12 @@ namespace Tusk.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectDto dto)
         {
+            var existing = await _projectService.GetProjectByIdAsync(id);
+            if (existing == null) return NotFound();
+
+            if (existing.Version != dto.Version)
+                return Conflict(existing);
+
             var updatedProject = await _projectService.UpdateProjectAsync(id, dto);
             if (updatedProject == null) return NotFound();
             return Ok(updatedProject);

@@ -93,6 +93,9 @@ namespace Tusk.Api.Controllers
             if (existing.CustomerId != userId && !IsAgentOrAdmin())
                 return Forbid();
 
+            if (existing.Version != dto.Version)
+                return Conflict(existing);
+
             var updatedTicket = await _ticketService.UpdateTicketContentAsync(projectId, id, dto);
             if (updatedTicket == null)
                 return NotFound();

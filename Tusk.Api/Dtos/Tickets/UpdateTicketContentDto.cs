@@ -10,5 +10,8 @@ namespace Tusk.Api.Dtos.Tickets
 
         [MaxLength(4000)]
         public string? Description { get; set; }
+
+        [Required]
+        public int? Version { get; set; }
     }
 }

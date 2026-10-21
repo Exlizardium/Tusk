@@ -28,6 +28,7 @@ namespace Tusk.Api.Services.Implementations
             return new ProjectDto
             {
                 Id = project.Id,
+                Version = project.Version,
                 Name = project.Name,
                 Description = project.Description,
                 CreatedAt = project.CreatedAt,
@@ -86,6 +87,7 @@ namespace Tusk.Api.Services.Implementations
 
             if (project == null) return null;
 
+            _context.ExpectVersion(project, dto.Version!.Value);
             project.Name = dto.Name;
             project.Description = dto.Description;
 

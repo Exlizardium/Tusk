@@ -104,7 +104,7 @@ namespace Tusk.Api.Tests.Services
             await using (var context = _db.CreateContext())
             {
                 await new ProjectService(context).UpdateProjectAsync(
-                    project.Id, new UpdateProjectDto { Name = "Beta", Description = "Renamed" });
+                    project.Id, new UpdateProjectDto { Name = "Beta", Description = "Renamed", Version = 1 });
             }
 
             await using var verify = _db.CreateContext();
@@ -114,11 +114,35 @@ namespace Tusk.Api.Tests.Services
         }
 
         [Fact]
+        public async Task UpdateProjectAsync_Throws_AndChangesNothing_WhenClientVersionIsStale()
+        {
+            var user = await _db.AddUserAsync();
+            var project = await _db.AddProjectAsync("Alpha", user.Id);
+
+            await using (var context = _db.CreateContext())
+            {
+                (await context.Projects.SingleAsync()).Description = "Edited by someone else";
+                await context.SaveChangesAsync();
+            }
+
+            await using (var context = _db.CreateContext())
+            {
+                await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => new ProjectService(context).UpdateProjectAsync(
+                    project.Id, new UpdateProjectDto { Name = "Stale edit", Version = 1 }));
+            }
+
+            await using var verify = _db.CreateContext();
+            var saved = await verify.Projects.SingleAsync();
+            Assert.Equal("Alpha", saved.Name);
+            Assert.Equal(2, saved.Version);
+        }
+
+        [Fact]
         public async Task UpdateProjectAsync_ReturnsNull_WhenProjectDoesNotExist()
         {
             await using var context = _db.CreateContext();
             var result = await new ProjectService(context)
-                .UpdateProjectAsync(999, new UpdateProjectDto { Name = "Beta" });
+                .UpdateProjectAsync(999, new UpdateProjectDto { Name = "Beta", Version = 1 });
 
             Assert.Null(result);
         }

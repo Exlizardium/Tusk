@@ -22,6 +22,8 @@ namespace Tusk.Api.Middleware
             var (statusCode, title) = exception switch
             {
                 KeyNotFoundException => (StatusCodes.Status404NotFound, exception.Message),
+                DbUpdateConcurrencyException =>
+                    (StatusCodes.Status409Conflict, "The resource was modified by someone else. Reload it and try again."),
                 DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } } =>
                     (StatusCodes.Status409Conflict, "A resource with the same identifying value already exists."),
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")

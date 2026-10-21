@@ -94,6 +94,8 @@ All endpoints except register and login need a `Authorization: Bearer <token>` h
 | Admin | `GET /api/admin/users-with-roles`, `POST /api/admin/assign-role` |
 | Health | `GET /health` (no token needed) |
 
+Tickets and projects carry a `version` number that goes up on every change. When editing a ticket's content or a project, send back the `version` you last read. If someone changed it in the meantime, you get `409 Conflict` with the current data, so nothing is silently overwritten.
+
 See Swagger UI for the full list, request bodies and responses.
 
 ## Tests

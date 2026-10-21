@@ -66,7 +66,7 @@ namespace Tusk.Api.Tests.Integration
             await _factory.SeedProjectAsync(admin.Id, "Alpha");
             var beta = await _factory.SeedProjectAsync(admin.Id, "Beta");
 
-            var response = await admin.Client.PutAsJsonAsync($"/api/projects/{beta.Id}", new UpdateProjectDto { Name = "Alpha" });
+            var response = await admin.Client.PutAsJsonAsync($"/api/projects/{beta.Id}", new UpdateProjectDto { Name = "Alpha", Version = 1 });
 
             Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
             var stored = await _factory.QueryAsync(db => db.Projects.SingleAsync(p => p.Id == beta.Id));

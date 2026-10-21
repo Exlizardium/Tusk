@@ -68,7 +68,7 @@ namespace Tusk.Api.Tests.Integration
             var project = await _factory.SeedProjectAsync(admin.Id);
             var user = await _factory.LoginAsNewUserAsync(role);
 
-            var response = await user.Client.PutAsJsonAsync($"/api/projects/{project.Id}", new UpdateProjectDto { Name = "Hijacked" });
+            var response = await user.Client.PutAsJsonAsync($"/api/projects/{project.Id}", new UpdateProjectDto { Name = "Hijacked", Version = 1 });
 
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
             Assert.Equal("Alpha", await _factory.QueryAsync(db => db.Projects.Select(p => p.Name).SingleAsync()));
@@ -81,7 +81,7 @@ namespace Tusk.Api.Tests.Integration
             var project = await _factory.SeedProjectAsync(creator.Id);
             var otherAdmin = await _factory.LoginAsNewUserAsync("Admin");
 
-            var response = await otherAdmin.Client.PutAsJsonAsync($"/api/projects/{project.Id}", new UpdateProjectDto { Name = "Beta" });
+            var response = await otherAdmin.Client.PutAsJsonAsync($"/api/projects/{project.Id}", new UpdateProjectDto { Name = "Beta", Version = 1 });
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("Beta", await _factory.QueryAsync(db => db.Projects.Select(p => p.Name).SingleAsync()));
@@ -92,7 +92,7 @@ namespace Tusk.Api.Tests.Integration
         {
             var admin = await _factory.LoginAsNewUserAsync("Admin");
 
-            var response = await admin.Client.PutAsJsonAsync("/api/projects/999", new UpdateProjectDto { Name = "Beta" });
+            var response = await admin.Client.PutAsJsonAsync("/api/projects/999", new UpdateProjectDto { Name = "Beta", Version = 1 });
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }

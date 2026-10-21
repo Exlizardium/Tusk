@@ -73,7 +73,7 @@ namespace Tusk.Api.Tests.Integration
             var admin = await _factory.LoginAsNewUserAsync("Admin");
             var project = await _factory.SeedProjectAsync(admin.Id);
 
-            var response = await PutRawJsonAsync(admin.Client, $"/api/projects/{project.Id}", "{\"name\":\"\"}");
+            var response = await PutRawJsonAsync(admin.Client, $"/api/projects/{project.Id}", "{\"name\":\"\",\"version\":1}");
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             Assert.Equal("Alpha", await _factory.QueryAsync(db => db.Projects.Select(p => p.Name).SingleAsync()));
@@ -126,10 +126,26 @@ namespace Tusk.Api.Tests.Integration
             var ticket = await _factory.SeedTicketAsync(project.Id, customer.Id, "Original");
 
             var response = await customer.Client.PutAsJsonAsync(
-                $"/api/projects/{project.Id}/tickets/{ticket.Id}/content", new UpdateTicketContentDto { Title = new string('t', 201) });
+                $"/api/projects/{project.Id}/tickets/{ticket.Id}/content", new UpdateTicketContentDto { Title = new string('t', 201), Version = 1 });
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             Assert.Equal("Original", await _factory.QueryAsync(db => db.Tickets.Select(t => t.Title).SingleAsync()));
+        }
+
+        [Fact]
+        public async Task ContentEdits_Return400_WhenVersionMissing()
+        {
+            var admin = await _factory.LoginAsNewUserAsync("Admin");
+            var project = await _factory.SeedProjectAsync(admin.Id);
+            var ticket = await _factory.SeedTicketAsync(project.Id, admin.Id, "Original");
+
+            var ticketEdit = await PutRawJsonAsync(admin.Client, $"/api/projects/{project.Id}/tickets/{ticket.Id}/content", "{\"title\":\"Edited\"}");
+            var projectEdit = await PutRawJsonAsync(admin.Client, $"/api/projects/{project.Id}", "{\"name\":\"Renamed\"}");
+
+            Assert.Equal(HttpStatusCode.BadRequest, ticketEdit.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, projectEdit.StatusCode);
+            Assert.Equal("Original", await _factory.QueryAsync(db => db.Tickets.Select(t => t.Title).SingleAsync()));
+            Assert.Equal("Alpha", await _factory.QueryAsync(db => db.Projects.Select(p => p.Name).SingleAsync()));
         }
 
         [Theory]

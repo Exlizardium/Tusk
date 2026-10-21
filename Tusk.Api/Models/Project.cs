@@ -1,8 +1,9 @@
 ﻿namespace Tusk.Api.Models
 {
-    public class Project
+    public class Project : IVersioned
     {
         public int Id { get; set; }
+        public int Version { get; set; } = 1;
 
         public string Name { get; set; } = null!;
         public string? Description { get; set; }

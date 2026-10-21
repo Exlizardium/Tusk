@@ -14,12 +14,40 @@ namespace Tusk.Api.Data
         public DbSet<Comment> Comments { get; set; } = null!;
         public DbSet<Project> Projects { get; set; } = null!;
 
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            IncrementVersionsOfModifiedEntities();
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            IncrementVersionsOfModifiedEntities();
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
+        public void ExpectVersion(IVersioned entity, int version)
+        {
+            Entry(entity).Property(nameof(IVersioned.Version)).OriginalValue = version;
+        }
+
+        private void IncrementVersionsOfModifiedEntities()
+        {
+            foreach (var entry in ChangeTracker.Entries<IVersioned>().Where(e => e.State == EntityState.Modified))
+            {
+                entry.Entity.Version++;
+            }
+        }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
             builder.Entity<Project>(entity =>
             {
+                entity.Property(p => p.Version)
+                    .IsConcurrencyToken();
+
                 entity.Property(p => p.Name)
                     .HasMaxLength(200)
                     .IsRequired();
@@ -43,6 +71,9 @@ namespace Tusk.Api.Data
 
             builder.Entity<Ticket>(entity =>
             {
+                entity.Property(t => t.Version)
+                    .IsConcurrencyToken();
+
                 entity.Property(t => t.Title)
                     .HasMaxLength(200)
                     .IsRequired();

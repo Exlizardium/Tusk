@@ -29,6 +29,7 @@ namespace Tusk.Api.Services.Implementations
         private static readonly Expression<Func<Ticket, TicketDto>> ToDtoExpression = ticket => new TicketDto
         {
             Id = ticket.Id,
+            Version = ticket.Version,
             Title = ticket.Title,
             Description = ticket.Description,
             Priority = ticket.Priority,
@@ -125,6 +126,7 @@ namespace Tusk.Api.Services.Implementations
             var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
+            _context.ExpectVersion(ticket, dto.Version!.Value);
             ticket.Title = dto.Title;
             ticket.Description = dto.Description;
             ticket.UpdatedAt = DateTime.UtcNow;

@@ -2,9 +2,10 @@
 
 namespace Tusk.Api.Models
 {
-    public class Ticket
+    public class Ticket : IVersioned
     {
         public int Id { get; set; }
+        public int Version { get; set; } = 1;
 
         public string Title { get; set; } = null!;
         public string? Description { get; set; }
