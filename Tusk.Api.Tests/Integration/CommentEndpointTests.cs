@@ -92,10 +92,91 @@ namespace Tusk.Api.Tests.Integration
 
             var response = await customer.Client.PostAsJsonAsync($"/api/tickets/{ticket.Id}/comments", new CreateCommentDto { Message = "Any update?" });
 
-            Assert.True(response.IsSuccessStatusCode, $"Expected success, got {(int)response.StatusCode}");
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
             var saved = await _factory.QueryAsync(db => db.Comments.SingleAsync());
             Assert.Equal(customer.Id, saved.UserId);
             Assert.Equal("Any update?", saved.Message);
+        }
+
+        [Fact]
+        public async Task CreateComment_ReturnsLocation_ThatServesTheNewComment()
+        {
+            var customer = await _factory.LoginAsNewUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+
+            var response = await customer.Client.PostAsJsonAsync($"/api/tickets/{ticket.Id}/comments", new CreateCommentDto { Message = "Any update?" });
+
+            var created = await response.Content.ReadFromJsonAsync<CommentDto>();
+            Assert.Equal($"/api/tickets/{ticket.Id}/comments/{created!.Id}", response.Headers.Location?.AbsolutePath);
+            var fetched = await customer.Client.GetFromJsonAsync<CommentDto>(response.Headers.Location);
+            Assert.Equal("Any update?", fetched!.Message);
+        }
+
+        [Fact]
+        public async Task GetComment_Returns401_WithoutToken()
+        {
+            var customer = await _factory.AddUserAsync("Customer");
+            var ticket = await SeedTicketAsync(customer.Id);
+            var comment = await SeedCommentAsync(ticket.Id, customer.Id, "Question");
+
+            var response = await _factory.CreateClient().GetAsync($"/api/tickets/{ticket.Id}/comments/{comment.Id}");
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        [Theory]
+        [InlineData("Customer")]
+        [InlineData("Agent")]
+        [InlineData("Admin")]
+        public async Task GetComment_ReturnsComment_ForReportingCustomerOrStaff(string role)
+        {
+            var caller = await _factory.LoginAsNewUserAsync(role);
+            var reporterId = role == "Customer" ? caller.Id : (await _factory.AddUserAsync("Customer")).Id;
+            var ticket = await SeedTicketAsync(reporterId);
+            var comment = await SeedCommentAsync(ticket.Id, reporterId, "Question");
+
+            var fetched = await caller.Client.GetFromJsonAsync<CommentDto>($"/api/tickets/{ticket.Id}/comments/{comment.Id}");
+
+            Assert.Equal("Question", fetched!.Message);
+        }
+
+        [Fact]
+        public async Task GetComment_Returns403_ForOtherCustomer()
+        {
+            var owner = await _factory.AddUserAsync("Customer");
+            var ticket = await SeedTicketAsync(owner.Id);
+            var comment = await SeedCommentAsync(ticket.Id, owner.Id, "Private details");
+            var otherCustomer = await _factory.LoginAsNewUserAsync("Customer");
+
+            var response = await otherCustomer.Client.GetAsync($"/api/tickets/{ticket.Id}/comments/{comment.Id}");
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetComment_Returns404_WhenCommentBelongsToAnotherTicket()
+        {
+            var customer = await _factory.LoginAsNewUserAsync("Customer");
+            var ownTicket = await SeedTicketAsync(customer.Id);
+            var otherTicket = await SeedTicketAsync((await _factory.AddUserAsync("Customer")).Id);
+            var otherComment = await SeedCommentAsync(otherTicket.Id, otherTicket.CustomerId, "Not yours");
+
+            var response = await customer.Client.GetAsync($"/api/tickets/{ownTicket.Id}/comments/{otherComment.Id}");
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task GetComment_Returns404_WhenTicketOrCommentDoesNotExist(bool ticketExists)
+        {
+            var agent = await _factory.LoginAsNewUserAsync("Agent");
+            var ticketId = ticketExists ? (await SeedTicketAsync((await _factory.AddUserAsync("Customer")).Id)).Id : 999;
+
+            var response = await agent.Client.GetAsync($"/api/tickets/{ticketId}/comments/999");
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
         [Fact]
@@ -120,7 +201,7 @@ namespace Tusk.Api.Tests.Integration
 
             var response = await agent.Client.PostAsJsonAsync($"/api/tickets/{ticket.Id}/comments", new CreateCommentDto { Message = "On it" });
 
-            Assert.True(response.IsSuccessStatusCode, $"Expected success, got {(int)response.StatusCode}");
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
             Assert.Equal(agent.Id, await _factory.QueryAsync(db => db.Comments.Select(c => c.UserId).SingleAsync()));
         }
 

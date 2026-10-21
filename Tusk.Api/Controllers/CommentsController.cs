@@ -76,7 +76,37 @@ namespace Tusk.Api.Controllers
                 return NotFound("Ticket not found");
             }
 
-            return Ok(createdComment);
+            return CreatedAtAction(nameof(GetComment), new { ticketId, id = createdComment.Id }, createdComment);
+        }
+
+        [Authorize]
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetComment(int ticketId, int id)
+        {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var ticketCustomerId = await _commentService.GetTicketCustomerIdAsync(ticketId);
+            if (ticketCustomerId == null)
+            {
+                return NotFound("Ticket not found");
+            }
+
+            if (ticketCustomerId != userId && !IsAgentOrAdmin())
+            {
+                return Forbid();
+            }
+
+            var comment = await _commentService.GetCommentAsync(ticketId, id);
+            if (comment == null)
+            {
+                return NotFound("Comment not found");
+            }
+
+            return Ok(comment);
         }
 
         [Authorize]
