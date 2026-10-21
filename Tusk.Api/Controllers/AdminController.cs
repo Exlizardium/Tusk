@@ -7,6 +7,7 @@ using Tusk.Api.Data;
 using Tusk.Api.Dtos.Admin;
 using Tusk.Api.Dtos.Common;
 using Tusk.Api.Models;
+using Tusk.Api.Models.Enums;
 
 namespace Tusk.Api.Controllers
 {
@@ -69,12 +70,12 @@ namespace Tusk.Api.Controllers
 
             await transaction.CommitAsync();
 
-            return Ok(new UsersWithRolesDto
+            return Ok(new UserWithRoleDto
             {
                 Id = user.Id,
                 FullName = $"{user.FirstName} {user.LastName}",
                 Email = user.Email!,
-                Roles = [roleName]
+                Role = dto.Role
             });
         }
 
@@ -94,7 +95,7 @@ namespace Tusk.Api.Controllers
 
             var userIds = users.Select(u => u.Id).ToList();
 
-            var rolesByUserId = (await _context.UserRoles
+            var highestRoleByUserId = (await _context.UserRoles
                     .Where(ur => userIds.Contains(ur.UserId))
                     .Join(_context.Roles,
                         ur => ur.RoleId,
@@ -102,17 +103,17 @@ namespace Tusk.Api.Controllers
                         (ur, r) => new { ur.UserId, RoleName = r.Name! })
                     .ToListAsync())
                 .GroupBy(x => x.UserId)
-                .ToDictionary(g => g.Key, g => g.Select(x => x.RoleName).ToList());
+                .ToDictionary(g => g.Key, g => g.Select(x => Enum.Parse<RoleType>(x.RoleName)).Max());
 
-            var usersWithRoles = users.Select(user => new UsersWithRolesDto
+            var usersWithRoles = users.Select(user => new UserWithRoleDto
             {
                 Id = user.Id,
                 FullName = $"{user.FirstName} {user.LastName}",
                 Email = user.Email!,
-                Roles = rolesByUserId.TryGetValue(user.Id, out var roles) ? roles : new List<string>()
+                Role = highestRoleByUserId.TryGetValue(user.Id, out var role) ? role : null
             }).ToList();
 
-            var result = new PagedResultDto<UsersWithRolesDto>
+            var result = new PagedResultDto<UserWithRoleDto>
             {
                 Items = usersWithRoles,
                 Page = page,

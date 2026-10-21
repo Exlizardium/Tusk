@@ -1,7 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Tusk.Api.Dtos.Admin;
+using Tusk.Api.Dtos.Common;
+using Tusk.Api.Models;
 using Tusk.Api.Models.Enums;
 using Tusk.Api.Tests.Infrastructure;
 
@@ -38,9 +42,29 @@ namespace Tusk.Api.Tests.Integration
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal([newRole.ToString()], await RolesOfAsync(user.Id));
-            var body = await response.Content.ReadFromJsonAsync<UsersWithRolesDto>();
+            var body = await response.Content.ReadFromJsonAsync<UserWithRoleDto>();
             Assert.Equal(user.Id, body!.Id);
-            Assert.Equal([newRole.ToString()], body.Roles);
+            Assert.Equal(newRole, body.Role);
+        }
+
+        [Fact]
+        public async Task GetUsersWithRoles_ReturnsEachUsersSingleRole_HighestForLegacyMultiRoleUsers()
+        {
+            var admin = await _factory.LoginAsNewUserAsync("Admin");
+            var customer = await _factory.AddUserAsync("Customer");
+            var legacyAgent = await _factory.AddUserAsync("Agent");
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                await users.AddToRoleAsync((await users.FindByIdAsync(legacyAgent.Id))!, "Customer");
+            }
+
+            var page = await admin.Client.GetFromJsonAsync<PagedResultDto<UserWithRoleDto>>("/api/admin/users-with-roles");
+
+            var roleById = page!.Items.ToDictionary(u => u.Id, u => u.Role);
+            Assert.Equal(RoleType.Admin, roleById[admin.Id]);
+            Assert.Equal(RoleType.Customer, roleById[customer.Id]);
+            Assert.Equal(RoleType.Agent, roleById[legacyAgent.Id]);
         }
 
         [Fact]
