@@ -57,7 +57,7 @@ namespace Tusk.Api.Services.Implementations
             {
                 Title = dto.Title,
                 Description = dto.Description,
-                Priority = dto.Priority,
+                Priority = dto.Priority!.Value,
                 Status = TicketStatus.Open,
                 CreatedAt = DateTime.UtcNow,
                 CustomerId = customerId,
@@ -138,7 +138,7 @@ namespace Tusk.Api.Services.Implementations
             var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
-            ticket.Status = dto.Status;
+            ticket.Status = dto.Status!.Value;
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -150,7 +150,7 @@ namespace Tusk.Api.Services.Implementations
             var ticket = await LocateTicketAsync(projectId, ticketId);
             if (ticket == null) return null;
 
-            ticket.Priority = dto.Priority;
+            ticket.Priority = dto.Priority!.Value;
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 

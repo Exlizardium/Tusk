@@ -136,7 +136,7 @@ namespace Tusk.Api.Tests.Integration
         {
             var customer = await _factory.LoginAsNewUserAsync("Customer");
 
-            var response = await customer.Client.PostAsJsonAsync("/api/projects/999/tickets", new CreateTicketDto { Title = "Broken" });
+            var response = await customer.Client.PostAsJsonAsync("/api/projects/999/tickets", new CreateTicketDto { Title = "Broken", Priority = TicketPriority.High });
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
             Assert.False(await _factory.QueryAsync(db => db.Tickets.AnyAsync()));

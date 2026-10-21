@@ -8,7 +8,8 @@ namespace Tusk.Api.Dtos.Admin
         [Required]
         public string userId { get; set; } = null!;
 
+        [Required]
         [EnumDataType(typeof(RoleType))]
-        public RoleType RoleName { get; set; }
+        public RoleType? RoleName { get; set; }
     }
 }

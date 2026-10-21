@@ -82,6 +82,7 @@ namespace Tusk.Api.Tests.Integration
         [Theory]
         [InlineData("{\"priority\":1}")]
         [InlineData("{\"title\":\"  \",\"priority\":1}")]
+        [InlineData("{\"title\":\"Broken\"}")]
         [InlineData("{\"title\":\"Broken\",\"priority\":99}")]
         [InlineData("{\"title\":\"Broken\",\"priority\":-1}")]
         public async Task CreateTicket_Returns400_ForMissingTitleOrUndefinedPriority(string json)
@@ -108,7 +109,8 @@ namespace Tusk.Api.Tests.Integration
             var response = await customer.Client.PostAsJsonAsync($"/api/projects/{project.Id}/tickets", new CreateTicketDto
             {
                 Title = new string('t', titleLength),
-                Description = new string('d', descriptionLength)
+                Description = new string('d', descriptionLength),
+                Priority = TicketPriority.Medium
             });
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -132,7 +134,9 @@ namespace Tusk.Api.Tests.Integration
 
         [Theory]
         [InlineData("status", "{\"status\":99}")]
+        [InlineData("status", "{}")]
         [InlineData("priority", "{\"priority\":99}")]
+        [InlineData("priority", "{}")]
         [InlineData("assign", "{}")]
         [InlineData("assign", "{\"assignedToId\":\"\"}")]
         public async Task StaffTicketActions_Return400_ForInvalidBody(string action, string json)
@@ -215,6 +219,23 @@ namespace Tusk.Api.Tests.Integration
             var response = await PostRawJsonAsync(admin.Client, "/api/admin/assign-role", json);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task AssignRole_Returns400_AndAddsNoRole_WhenRoleNameMissing()
+        {
+            var admin = await _factory.LoginAsNewUserAsync("Admin");
+            var agent = await _factory.AddUserAsync("Agent");
+
+            var response = await PostRawJsonAsync(admin.Client, "/api/admin/assign-role", $"{{\"userId\":\"{agent.Id}\"}}");
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var roles = await _factory.QueryAsync(db =>
+                (from userRole in db.UserRoles
+                 join role in db.Roles on userRole.RoleId equals role.Id
+                 where userRole.UserId == agent.Id
+                 select role.Name).ToListAsync());
+            Assert.Equal(["Agent"], roles);
         }
     }
 }

@@ -12,7 +12,8 @@ namespace Tusk.Api.Dtos.Tickets
         [MaxLength(4000)]
         public string? Description { get; set; }
 
+        [Required]
         [EnumDataType(typeof(TicketPriority))]
-        public TicketPriority Priority { get; set; }
+        public TicketPriority? Priority { get; set; }
     }
 }

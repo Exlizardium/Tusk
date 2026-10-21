@@ -5,7 +5,8 @@ namespace Tusk.Api.Dtos.Tickets
 {
     public class UpdateTicketStatusDto
     {
+        [Required]
         [EnumDataType(typeof(TicketStatus))]
-        public TicketStatus Status { get; set; }
+        public TicketStatus? Status { get; set; }
     }
 }

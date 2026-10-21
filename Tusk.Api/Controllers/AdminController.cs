@@ -34,7 +34,7 @@ namespace Tusk.Api.Controllers
                 return NotFound("User not found");
             }
 
-            var roleName = assignRoleDto.RoleName.ToString();
+            var roleName = assignRoleDto.RoleName!.Value.ToString();
 
             var role = await _roleManager.FindByNameAsync(roleName);
             if (role == null)

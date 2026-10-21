@@ -51,7 +51,7 @@ namespace Tusk.Api.Tests.Services
 
             await using var context = _db.CreateContext();
             await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-                new TicketService(context).CreateTicketAsync(999, new CreateTicketDto { Title = "Broken" }, customer.Id));
+                new TicketService(context).CreateTicketAsync(999, new CreateTicketDto { Title = "Broken", Priority = TicketPriority.High }, customer.Id));
         }
 
         [Fact]
