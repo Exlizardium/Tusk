@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,8 @@ namespace Tusk.Api.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
+        public const IsolationLevel RoleChangeIsolationLevel = IsolationLevel.Serializable;
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly AppDbContext _context;
@@ -25,16 +28,16 @@ namespace Tusk.Api.Controllers
             _context = context;
         }
 
-        [HttpPost("assign-role")]
-        public async Task<IActionResult> AssignRole([FromBody] AssignRoleDto assignRoleDto)
+        [HttpPut("users/{userId}/role")]
+        public async Task<IActionResult> SetRole(string userId, [FromBody] SetUserRoleDto dto)
         {
-            var user = await _userManager.FindByIdAsync(assignRoleDto.userId);
+            var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
             {
                 return NotFound("User not found");
             }
 
-            var roleName = assignRoleDto.RoleName!.Value.ToString();
+            var roleName = dto.Role!.Value.ToString();
 
             var role = await _roleManager.FindByNameAsync(roleName);
             if (role == null)
@@ -42,13 +45,37 @@ namespace Tusk.Api.Controllers
                 return NotFound("Role not found");
             }
 
-            var result = await _userManager.AddToRoleAsync(user, roleName);
-            if (!result.Succeeded)
+            await using var transaction = await _context.Database.BeginTransactionAsync(RoleChangeIsolationLevel);
+
+            var currentRoles = await _userManager.GetRolesAsync(user);
+
+            if (currentRoles.Contains("Admin") && roleName != "Admin"
+                && (await _userManager.GetUsersInRoleAsync("Admin")).Count == 1)
             {
-                return BadRequest(result.Errors);
+                return Conflict("Cannot demote the last Admin");
             }
 
-            return Ok($"Role {role.Name} assigned successfully to {user.UserName}");
+            var removed = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            if (!removed.Succeeded)
+            {
+                return BadRequest(removed.Errors);
+            }
+
+            var added = await _userManager.AddToRoleAsync(user, roleName);
+            if (!added.Succeeded)
+            {
+                return BadRequest(added.Errors);
+            }
+
+            await transaction.CommitAsync();
+
+            return Ok(new UsersWithRolesDto
+            {
+                Id = user.Id,
+                FullName = $"{user.FirstName} {user.LastName}",
+                Email = user.Email!,
+                Roles = [roleName]
+            });
         }
 
         [HttpGet("users-with-roles")]

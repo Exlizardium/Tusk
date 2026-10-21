@@ -24,6 +24,8 @@ namespace Tusk.Api.Middleware
                 KeyNotFoundException => (StatusCodes.Status404NotFound, exception.Message),
                 DbUpdateConcurrencyException =>
                     (StatusCodes.Status409Conflict, "The resource was modified by someone else. Reload it and try again."),
+                _ when HasPostgresError(exception, PostgresErrorCodes.SerializationFailure) =>
+                    (StatusCodes.Status409Conflict, "The request conflicted with a concurrent change. Try again."),
                 DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } } =>
                     (StatusCodes.Status409Conflict, "A resource with the same identifying value already exists."),
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")
@@ -39,6 +41,17 @@ namespace Tusk.Api.Middleware
             }, cancellationToken);
 
             return true;
+        }
+
+        private static bool HasPostgresError(Exception exception, string sqlState)
+        {
+            for (Exception? current = exception; current != null; current = current.InnerException)
+            {
+                if (current is PostgresException postgresException && postgresException.SqlState == sqlState)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

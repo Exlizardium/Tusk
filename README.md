@@ -63,7 +63,7 @@ The API runs at `http://localhost:5054`, with Swagger UI at `http://localhost:50
 | Agent | Work on any ticket: assign, change status and priority |
 | Admin | Everything an agent can, plus manage projects and user roles |
 
-New users always register as **Customer**. An admin can change roles via `POST /api/admin/assign-role`.
+New users always register as **Customer**. An admin can change a user's role via `PUT /api/admin/users/{userId}/role` (each user has exactly one role; the last admin can't be demoted). A role change applies once the user logs in again, as login tokens are valid for 60 minutes.
 
 ### Creating the first admin
 
@@ -91,7 +91,7 @@ All endpoints except register and login need a `Authorization: Bearer <token>` h
 | Tickets | `/api/projects/{projectId}/tickets` |
 | My tickets | `GET /api/tickets/mine`, `GET /api/tickets/assigned` |
 | Comments | `/api/tickets/{ticketId}/comments` |
-| Admin | `GET /api/admin/users-with-roles`, `POST /api/admin/assign-role` |
+| Admin | `GET /api/admin/users-with-roles`, `PUT /api/admin/users/{userId}/role` |
 | Health | `GET /health` (no token needed) |
 
 Tickets and projects carry a `version` number that goes up on every change. When editing a ticket's content or a project, send back the `version` you last read. If someone changed it in the meantime, you get `409 Conflict` with the current data, so nothing is silently overwritten.

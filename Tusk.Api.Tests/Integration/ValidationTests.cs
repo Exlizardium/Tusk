@@ -225,25 +225,16 @@ namespace Tusk.Api.Tests.Integration
         }
 
         [Theory]
-        [InlineData("{\"roleName\":1}")]
-        [InlineData("{\"userId\":\"\",\"roleName\":1}")]
-        [InlineData("{\"userId\":\"someone\",\"roleName\":99}")]
-        public async Task AssignRole_Returns400_ForInvalidBody(string json)
-        {
-            var admin = await _factory.LoginAsNewUserAsync("Admin");
-
-            var response = await PostRawJsonAsync(admin.Client, "/api/admin/assign-role", json);
-
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        }
-
-        [Fact]
-        public async Task AssignRole_Returns400_AndAddsNoRole_WhenRoleNameMissing()
+        [InlineData("{}")]
+        [InlineData("{\"role\":null}")]
+        [InlineData("{\"role\":99}")]
+        [InlineData("{\"role\":-1}")]
+        public async Task SetRole_Returns400_AndChangesNoRole_ForInvalidBody(string json)
         {
             var admin = await _factory.LoginAsNewUserAsync("Admin");
             var agent = await _factory.AddUserAsync("Agent");
 
-            var response = await PostRawJsonAsync(admin.Client, "/api/admin/assign-role", $"{{\"userId\":\"{agent.Id}\"}}");
+            var response = await PutRawJsonAsync(admin.Client, $"/api/admin/users/{agent.Id}/role", json);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var roles = await _factory.QueryAsync(db =>
