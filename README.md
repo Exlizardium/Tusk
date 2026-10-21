@@ -53,6 +53,7 @@ The API runs at `http://localhost:5054`, with Swagger UI at `http://localhost:50
 | `POSTGRES_USER` | Database user |
 | `POSTGRES_PASSWORD` | Database password |
 | `JWT_KEY` | Secret used to sign login tokens, at least 32 characters |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Optional. Creates the first admin on startup (see below) |
 
 ## Roles
 
@@ -66,21 +67,18 @@ New users always register as **Customer**. An admin can change roles via `POST /
 
 ### Creating the first admin
 
-Since only admins can assign roles, the first one has to be set in the database. Register a user, then open a database shell:
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` and (re)start with `docker compose up -d`. When running with `dotnet`, use user-secrets instead:
 
 ```sh
-docker compose exec postgres psql -U postgres -d tuskdb
+dotnet user-secrets set "Admin:Email" "admin@example.com" --project Tusk.Api
+dotnet user-secrets set "Admin:Password" "<password>" --project Tusk.Api
 ```
 
-and run (with your email):
+On startup the API creates that account with the Admin role; it then logs in like any other user. Good to know:
 
-```sql
-INSERT INTO "AspNetUserRoles" ("UserId", "RoleId")
-SELECT u."Id", r."Id" FROM "AspNetUsers" u, "AspNetRoles" r
-WHERE u."Email" = 'you@example.com' AND r."Name" = 'Admin';
-```
-
-Type `\q` to exit, then log in again to get a token with the new role.
+- It only creates the account if the email isn't taken. An existing user with that email is **not** promoted (a warning is logged), so pick an email nobody has registered with.
+- Changing the password later in config does nothing; the account already exists.
+- If the password doesn't meet the rules, or only one of the two is set, the API refuses to start and says why.
 
 ## API overview
 

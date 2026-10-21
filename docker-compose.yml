@@ -38,6 +38,8 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: *db-connection
       Jwt__Key: ${JWT_KEY:?set JWT_KEY in .env}
+      Admin__Email: ${ADMIN_EMAIL:-}
+      Admin__Password: ${ADMIN_PASSWORD:-}
     ports:
       - "8080:8080"
 
