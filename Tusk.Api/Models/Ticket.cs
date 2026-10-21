@@ -15,6 +15,11 @@ namespace Tusk.Api.Models
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        public DateTime? ClosedAt { get; set; }
+        public string? ClosedById { get; set; }
+        public ApplicationUser? ClosedBy { get; set; }
+        public TicketCloseReason? CloseReason { get; set; }
+
         public string CustomerId { get; set; } = null!;
         public ApplicationUser Customer { get; set; } = null!;
 

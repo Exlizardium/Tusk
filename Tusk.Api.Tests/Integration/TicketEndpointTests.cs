@@ -224,10 +224,10 @@ namespace Tusk.Api.Tests.Integration
             var agent = await _factory.LoginAsNewUserAsync("Agent");
 
             var response = await agent.Client.PutAsJsonAsync(
-                $"/api/projects/{project.Id}/tickets/{ticket.Id}/status", new UpdateTicketStatusDto { Status = TicketStatus.Solved });
+                $"/api/projects/{project.Id}/tickets/{ticket.Id}/status", new UpdateTicketStatusDto { Status = TicketStatus.InProgress });
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal(TicketStatus.Solved, (await ReloadTicketAsync(ticket.Id)).Status);
+            Assert.Equal(TicketStatus.InProgress, (await ReloadTicketAsync(ticket.Id)).Status);
         }
 
         [Fact]

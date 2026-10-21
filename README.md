@@ -59,7 +59,7 @@ The API runs at `http://localhost:5054`, with Swagger UI at `http://localhost:50
 
 | Role | Can |
 |---|---|
-| Customer | File tickets, see and comment on their own tickets |
+| Customer | File tickets, see, comment on, close and reopen their own tickets |
 | Agent | Work on any ticket: assign, change status and priority |
 | Admin | Everything an agent can, plus manage projects and user roles |
 

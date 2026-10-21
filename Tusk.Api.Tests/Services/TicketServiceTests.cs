@@ -87,6 +87,8 @@ namespace Tusk.Api.Tests.Services
         [InlineData("assign")]
         [InlineData("take")]
         [InlineData("unassign")]
+        [InlineData("close")]
+        [InlineData("reopen")]
         public async Task SingleTicketOperations_ReturnNull_AndChangeNothing_WhenTicketBelongsToAnotherProject(string operation)
         {
             var customer = await _db.AddUserAsync();
@@ -109,6 +111,8 @@ namespace Tusk.Api.Tests.Services
                     "assign" => await service.AssignTicketAsync(wrongProjectId, ticket.Id, new AssignTicketDto { AssignedToId = customer.Id }),
                     "take" => await service.TakeTicketAsync(wrongProjectId, ticket.Id, customer.Id),
                     "unassign" => await service.UnassignTicketAsync(wrongProjectId, ticket.Id),
+                    "close" => await service.CloseTicketAsync(wrongProjectId, ticket.Id, agent.Id, new CloseTicketDto { Reason = TicketCloseReason.Fixed }),
+                    "reopen" => await service.ReopenTicketAsync(wrongProjectId, ticket.Id),
                     _ => throw new ArgumentOutOfRangeException(nameof(operation))
                 };
 
@@ -121,6 +125,89 @@ namespace Tusk.Api.Tests.Services
             Assert.Equal(TicketPriority.Medium, saved.Priority);
             Assert.Equal(agent.Id, saved.AssignedToId);
             Assert.Null(saved.UpdatedAt);
+            Assert.Null(saved.ClosedAt);
+        }
+
+        [Fact]
+        public async Task CloseTicketAsync_SetsClosedStatus_WhoWhenAndReason()
+        {
+            var customer = await _db.AddUserAsync();
+            var agent = await _db.AddUserAsync("Agent", "Smith");
+            var project = await _db.AddProjectAsync("Alpha", customer.Id);
+            var ticket = await _db.AddTicketAsync(project.Id, customer.Id, status: TicketStatus.InProgress, assignedToId: agent.Id);
+            var before = DateTime.UtcNow;
+
+            TicketDto? returned;
+            await using (var context = _db.CreateContext())
+            {
+                returned = await new TicketService(context).CloseTicketAsync(
+                    project.Id, ticket.Id, agent.Id, new CloseTicketDto { Reason = TicketCloseReason.Duplicate });
+            }
+
+            var saved = await ReloadTicketAsync(ticket.Id);
+            Assert.Equal(TicketStatus.Closed, saved.Status);
+            Assert.Equal(TicketCloseReason.Duplicate, saved.CloseReason);
+            Assert.Equal(agent.Id, saved.ClosedById);
+            Assert.NotNull(saved.ClosedAt);
+            Assert.InRange(saved.ClosedAt.Value, before, DateTime.UtcNow);
+            Assert.Equal(saved.ClosedAt, saved.UpdatedAt);
+            Assert.Equal(agent.Id, saved.AssignedToId);
+
+            Assert.Equal(TicketStatus.Closed, returned!.Status);
+            Assert.Equal(TicketCloseReason.Duplicate, returned.CloseReason);
+            Assert.Equal(agent.Id, returned.ClosedById);
+            Assert.Equal(saved.ClosedAt, returned.ClosedAt);
+        }
+
+        [Fact]
+        public async Task ReopenTicketAsync_SetsOpenStatus_AndClearsCloseDetails()
+        {
+            var customer = await _db.AddUserAsync();
+            var project = await _db.AddProjectAsync("Alpha", customer.Id);
+            var ticket = await _db.AddTicketAsync(project.Id, customer.Id);
+
+            await using (var context = _db.CreateContext())
+            {
+                await new TicketService(context).CloseTicketAsync(
+                    project.Id, ticket.Id, customer.Id, new CloseTicketDto { Reason = TicketCloseReason.WontFix });
+            }
+
+            TicketDto? returned;
+            await using (var context = _db.CreateContext())
+            {
+                returned = await new TicketService(context).ReopenTicketAsync(project.Id, ticket.Id);
+            }
+
+            var saved = await ReloadTicketAsync(ticket.Id);
+            Assert.Equal(TicketStatus.Open, saved.Status);
+            Assert.Null(saved.ClosedAt);
+            Assert.Null(saved.ClosedById);
+            Assert.Null(saved.CloseReason);
+
+            Assert.Equal(TicketStatus.Open, returned!.Status);
+            Assert.Null(returned.ClosedAt);
+            Assert.Null(returned.CloseReason);
+        }
+
+        [Fact]
+        public async Task CloseDetails_AreReturned_FromListQuery()
+        {
+            var customer = await _db.AddUserAsync();
+            var project = await _db.AddProjectAsync("Alpha", customer.Id);
+            var ticket = await _db.AddTicketAsync(project.Id, customer.Id);
+
+            await using (var context = _db.CreateContext())
+            {
+                await new TicketService(context).CloseTicketAsync(
+                    project.Id, ticket.Id, customer.Id, new CloseTicketDto { Reason = TicketCloseReason.NoResponse });
+            }
+
+            await using var verify = _db.CreateContext();
+            var listed = Assert.Single((await new TicketService(verify).GetAllTicketsAsync(project.Id, new TicketQueryParams(), customerId: null)).Items);
+
+            Assert.Equal(TicketCloseReason.NoResponse, listed.CloseReason);
+            Assert.Equal(customer.Id, listed.ClosedById);
+            Assert.NotNull(listed.ClosedAt);
         }
 
         [Fact]
@@ -151,10 +238,10 @@ namespace Tusk.Api.Tests.Services
             await using (var context = _db.CreateContext())
             {
                 await new TicketService(context).UpdateTicketStatusAsync(
-                    project.Id, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.Solved });
+                    project.Id, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.InProgress });
             }
 
-            Assert.Equal(TicketStatus.Solved, (await ReloadTicketAsync(ticket.Id)).Status);
+            Assert.Equal(TicketStatus.InProgress, (await ReloadTicketAsync(ticket.Id)).Status);
         }
 
         [Fact]
@@ -190,7 +277,7 @@ namespace Tusk.Api.Tests.Services
                 _ = operation switch
                 {
                     "content" => await service.UpdateTicketContentAsync(project.Id, ticket.Id, new UpdateTicketContentDto { Title = "Edited" }),
-                    "status" => await service.UpdateTicketStatusAsync(project.Id, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.Solved }),
+                    "status" => await service.UpdateTicketStatusAsync(project.Id, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.InProgress }),
                     "priority" => await service.UpdateTicketPriorityAsync(project.Id, ticket.Id, new UpdateTicketPriorityDto { Priority = TicketPriority.High }),
                     _ => throw new ArgumentOutOfRangeException(nameof(operation))
                 };
@@ -212,7 +299,7 @@ namespace Tusk.Api.Tests.Services
             await using (var context = _db.CreateContext())
             {
                 updated = await new TicketService(context).UpdateTicketStatusAsync(
-                    project.Id, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.Solved });
+                    project.Id, ticket.Id, new UpdateTicketStatusDto { Status = TicketStatus.InProgress });
             }
 
             await using var verify = _db.CreateContext();

@@ -66,6 +66,11 @@ namespace Tusk.Api.Data
                     .HasForeignKey(t => t.AssignedToId)
                     .OnDelete(DeleteBehavior.SetNull);
 
+                entity.HasOne(t => t.ClosedBy)
+                    .WithMany()
+                    .HasForeignKey(t => t.ClosedById)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 entity.HasMany(t => t.Comments)
                     .WithOne(c => c.Ticket)
                     .HasForeignKey(c => c.TicketId)

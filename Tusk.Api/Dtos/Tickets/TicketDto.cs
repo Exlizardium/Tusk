@@ -15,6 +15,10 @@ namespace Tusk.Api.Dtos.Tickets
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        public DateTime? ClosedAt { get; set; }
+        public string? ClosedById { get; set; }
+        public TicketCloseReason? CloseReason { get; set; }
+
         public string CustomerId { get; set; } = null!;
         public string? AssignedToId { get; set; }
 

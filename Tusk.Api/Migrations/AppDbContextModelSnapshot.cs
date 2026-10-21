@@ -305,6 +305,15 @@ namespace Tusk.Api.Migrations
                     b.Property<string>("AssignedToId")
                         .HasColumnType("text");
 
+                    b.Property<int?>("CloseReason")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ClosedById")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -335,6 +344,8 @@ namespace Tusk.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AssignedToId");
+
+                    b.HasIndex("ClosedById");
 
                     b.HasIndex("CustomerId");
 
@@ -431,6 +442,11 @@ namespace Tusk.Api.Migrations
                         .HasForeignKey("AssignedToId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Tusk.Api.Models.ApplicationUser", "ClosedBy")
+                        .WithMany()
+                        .HasForeignKey("ClosedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Tusk.Api.Models.ApplicationUser", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
@@ -444,6 +460,8 @@ namespace Tusk.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("AssignedTo");
+
+                    b.Navigation("ClosedBy");
 
                     b.Navigation("Customer");
 

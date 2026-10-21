@@ -35,6 +35,9 @@ namespace Tusk.Api.Services.Implementations
             Status = ticket.Status,
             CreatedAt = ticket.CreatedAt,
             UpdatedAt = ticket.UpdatedAt,
+            ClosedAt = ticket.ClosedAt,
+            ClosedById = ticket.ClosedById,
+            CloseReason = ticket.CloseReason,
             CustomerId = ticket.CustomerId,
             AssignedToId = ticket.AssignedToId,
             ProjectId = ticket.ProjectId
@@ -184,6 +187,37 @@ namespace Tusk.Api.Services.Implementations
             if (ticket == null) return null;
 
             ticket.AssignedToId = null;
+            ticket.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return MapToDto(ticket);
+        }
+
+        public async Task<TicketDto?> CloseTicketAsync(int projectId, int ticketId, string closedById, CloseTicketDto dto)
+        {
+            var ticket = await LocateTicketAsync(projectId, ticketId);
+            if (ticket == null) return null;
+
+            var now = DateTime.UtcNow;
+            ticket.Status = TicketStatus.Closed;
+            ticket.ClosedAt = now;
+            ticket.ClosedById = closedById;
+            ticket.CloseReason = dto.Reason;
+            ticket.UpdatedAt = now;
+            await _context.SaveChangesAsync();
+
+            return MapToDto(ticket);
+        }
+
+        public async Task<TicketDto?> ReopenTicketAsync(int projectId, int ticketId)
+        {
+            var ticket = await LocateTicketAsync(projectId, ticketId);
+            if (ticket == null) return null;
+
+            ticket.Status = TicketStatus.Open;
+            ticket.ClosedAt = null;
+            ticket.ClosedById = null;
+            ticket.CloseReason = null;
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 

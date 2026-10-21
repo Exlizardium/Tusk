@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Tusk.Api.Dtos.Tickets;
 using Tusk.Api.Models;
+using Tusk.Api.Models.Enums;
 using Tusk.Api.Services.Implementations;
 using Tusk.Api.Services.Interfaces;
 
@@ -106,10 +107,65 @@ namespace Tusk.Api.Controllers
             if (userId == null)
                 return Unauthorized();
 
+            if (dto.Status == TicketStatus.Closed)
+                return BadRequest("Use the close endpoint to close a ticket");
+
+            var existing = await _ticketService.GetTicketByIdAsync(projectId, id);
+            if (existing == null) return NotFound();
+
+            if (existing.Status == TicketStatus.Closed)
+                return Conflict("Reopen the ticket before changing its status");
+
             var updatedTicket = await _ticketService.UpdateTicketStatusAsync(projectId, id, dto);
             if (updatedTicket == null)
                 return NotFound();
             return Ok(updatedTicket);
+        }
+
+        [Authorize]
+        [HttpPut("{id}/close")]
+        public async Task<IActionResult> Close(int projectId, int id, [FromBody] CloseTicketDto dto)
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var existing = await _ticketService.GetTicketByIdAsync(projectId, id);
+            if (existing == null) return NotFound();
+
+            if (existing.CustomerId != userId && !IsAgentOrAdmin())
+                return Forbid();
+
+            if (existing.Status == TicketStatus.Closed)
+                return Conflict("Ticket is already closed");
+
+            var closedTicket = await _ticketService.CloseTicketAsync(projectId, id, userId, dto);
+            if (closedTicket == null)
+                return NotFound();
+            return Ok(closedTicket);
+        }
+
+        [Authorize]
+        [HttpPut("{id}/reopen")]
+        public async Task<IActionResult> Reopen(int projectId, int id)
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var existing = await _ticketService.GetTicketByIdAsync(projectId, id);
+            if (existing == null) return NotFound();
+
+            if (existing.CustomerId != userId && !IsAgentOrAdmin())
+                return Forbid();
+
+            if (existing.Status != TicketStatus.Closed)
+                return Conflict("Ticket is not closed");
+
+            var reopenedTicket = await _ticketService.ReopenTicketAsync(projectId, id);
+            if (reopenedTicket == null)
+                return NotFound();
+            return Ok(reopenedTicket);
         }
 
         [Authorize(Roles = "Agent,Admin")]
