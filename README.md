@@ -92,6 +92,7 @@ All endpoints except register and login need a `Authorization: Bearer <token>` h
 | My tickets | `GET /api/tickets/mine`, `GET /api/tickets/assigned` |
 | Comments | `/api/tickets/{ticketId}/comments` |
 | Admin | `GET /api/admin/users-with-roles`, `POST /api/admin/assign-role` |
+| Health | `GET /health` (no token needed) |
 
 See Swagger UI for the full list, request bodies and responses.
 

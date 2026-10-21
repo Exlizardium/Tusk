@@ -21,6 +21,15 @@ namespace Tusk.Api.Tests.Integration
         }
 
         [Fact]
+        public async Task HealthEndpoint_ReturnsHealthy_WithoutToken()
+        {
+            var response = await _factory.CreateClient().GetAsync("/health");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
+        }
+
+        [Fact]
         public async Task ProtectedEndpoint_Returns401_WithoutToken()
         {
             var response = await _factory.CreateClient().GetAsync("/api/projects");
