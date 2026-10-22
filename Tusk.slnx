@@ -1,4 +1,5 @@
 <Solution>
+  <Folder Name="/Tusk.Web/" />
   <Project Path="Tusk.Api.Tests/Tusk.Api.Tests.csproj" />
   <Project Path="Tusk.Api/Tusk.Api.csproj" />
 </Solution>
