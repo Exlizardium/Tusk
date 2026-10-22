@@ -18,10 +18,13 @@ namespace Tusk.Api.Dtos.Tickets
 
         public DateTime? ClosedAt { get; set; }
         public string? ClosedById { get; set; }
+        public string? ClosedByName { get; set; }
         public TicketCloseReason? CloseReason { get; set; }
 
         public string CustomerId { get; set; } = null!;
+        public string CustomerName { get; set; } = null!;
         public string? AssignedToId { get; set; }
+        public string? AssignedToName { get; set; }
 
         public int ProjectId { get; set; }
     }

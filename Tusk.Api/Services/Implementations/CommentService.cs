@@ -21,12 +21,19 @@ namespace Tusk.Api.Services.Implementations
             Id = comment.Id,
             TicketId = comment.TicketId,
             UserId = comment.UserId,
+            UserName = (comment.User.FirstName + " " + comment.User.LastName).Trim(),
             Message = comment.Message,
             CreatedAt = comment.CreatedAt,
             UpdatedAt = comment.UpdatedAt
         };
 
-        private static readonly Func<Comment, CommentDto> MapToDto = ToDtoExpression.Compile();
+        private async Task<CommentDto> ProjectCommentAsync(int commentId)
+        {
+            return await _context.Comments
+                .Where(c => c.Id == commentId)
+                .Select(ToDtoExpression)
+                .FirstAsync();
+        }
 
         private async Task<Comment?> LocateCommentAsync(int ticketId, int commentId)
         {
@@ -53,10 +60,10 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<CommentDto?> GetCommentAsync(int ticketId, int commentId)
         {
-            var comment = await LocateCommentAsync(ticketId, commentId);
-            if (comment == null) return null;
-
-            return MapToDto(comment);
+            return await _context.Comments
+                .Where(c => c.Id == commentId && c.TicketId == ticketId)
+                .Select(ToDtoExpression)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<CommentDto?> CreateCommentAsync(CreateCommentDto dto, string userId, int ticketId)
@@ -77,7 +84,7 @@ namespace Tusk.Api.Services.Implementations
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
 
-            return MapToDto(comment);
+            return await ProjectCommentAsync(comment.Id);
         }
 
         public async Task<CommentDto?> UpdateCommentAsync(int ticketId, int commentId, UpdateCommentDto dto)
@@ -89,7 +96,7 @@ namespace Tusk.Api.Services.Implementations
             comment.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return MapToDto(comment);
+            return await ProjectCommentAsync(comment.Id);
         }
 
         public async Task<bool> DeleteCommentAsync(int ticketId, int commentId)

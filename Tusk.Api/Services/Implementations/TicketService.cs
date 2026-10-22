@@ -38,13 +38,22 @@ namespace Tusk.Api.Services.Implementations
             UpdatedAt = ticket.UpdatedAt,
             ClosedAt = ticket.ClosedAt,
             ClosedById = ticket.ClosedById,
+            ClosedByName = ticket.ClosedById == null ? null : (ticket.ClosedBy!.FirstName + " " + ticket.ClosedBy.LastName).Trim(),
             CloseReason = ticket.CloseReason,
             CustomerId = ticket.CustomerId,
+            CustomerName = (ticket.Customer.FirstName + " " + ticket.Customer.LastName).Trim(),
             AssignedToId = ticket.AssignedToId,
+            AssignedToName = ticket.AssignedToId == null ? null : (ticket.AssignedTo!.FirstName + " " + ticket.AssignedTo.LastName).Trim(),
             ProjectId = ticket.ProjectId
         };
 
-        private static readonly Func<Ticket, TicketDto> MapToDto = ToDtoExpression.Compile();
+        private async Task<TicketDto> ProjectTicketAsync(int ticketId)
+        {
+            return await _context.Tickets
+                .Where(t => t.Id == ticketId)
+                .Select(ToDtoExpression)
+                .FirstAsync();
+        }
 
         public async Task<TicketDto> CreateTicketAsync(int projectId, CreateTicketDto dto, string customerId)
         {
@@ -68,7 +77,7 @@ namespace Tusk.Api.Services.Implementations
             _context.Tickets.Add(ticket);
             await _context.SaveChangesAsync();
 
-            return MapToDto(ticket);
+            return await ProjectTicketAsync(ticket.Id);
         }
 
         private static async Task<PagedResultDto<TicketDto>> ToPagedResultAsync(IQueryable<Ticket> source, TicketQueryParams query)
@@ -115,10 +124,10 @@ namespace Tusk.Api.Services.Implementations
 
         public async Task<TicketDto?> GetTicketByIdAsync(int projectId, int ticketId)
         {
-            var ticket = await LocateTicketAsync(projectId, ticketId);
-            if (ticket == null) return null;
-
-            return MapToDto(ticket);
+            return await _context.Tickets
+                .Where(t => t.Id == ticketId && t.ProjectId == projectId)
+                .Select(ToDtoExpression)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<TicketDto?> UpdateTicketContentAsync(int projectId, int ticketId, UpdateTicketContentDto dto)
@@ -132,7 +141,7 @@ namespace Tusk.Api.Services.Implementations
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return MapToDto(ticket);
+            return await ProjectTicketAsync(ticket.Id);
         }
 
         public async Task<TicketDto?> UpdateTicketStatusAsync(int projectId, int ticketId, UpdateTicketStatusDto dto)
@@ -144,7 +153,7 @@ namespace Tusk.Api.Services.Implementations
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return MapToDto(ticket);
+            return await ProjectTicketAsync(ticket.Id);
         }
 
         public async Task<TicketDto?> UpdateTicketPriorityAsync(int projectId, int ticketId, UpdateTicketPriorityDto dto)
@@ -156,7 +165,7 @@ namespace Tusk.Api.Services.Implementations
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return MapToDto(ticket);
+            return await ProjectTicketAsync(ticket.Id);
         }
 
         public async Task<TicketDto?> AssignTicketAsync(int projectId, int ticketId, AssignTicketDto dto)
@@ -168,7 +177,7 @@ namespace Tusk.Api.Services.Implementations
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return MapToDto(ticket);
+            return await ProjectTicketAsync(ticket.Id);
         }
 
         public async Task<TicketDto?> TakeTicketAsync(int projectId, int ticketId, string userId)
@@ -180,7 +189,7 @@ namespace Tusk.Api.Services.Implementations
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return MapToDto(ticket);
+            return await ProjectTicketAsync(ticket.Id);
         }
 
         public async Task<TicketDto?> UnassignTicketAsync(int projectId, int ticketId)
@@ -192,7 +201,7 @@ namespace Tusk.Api.Services.Implementations
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return MapToDto(ticket);
+            return await ProjectTicketAsync(ticket.Id);
         }
 
         public async Task<TicketDto?> CloseTicketAsync(int projectId, int ticketId, string closedById, CloseTicketDto dto)
@@ -208,7 +217,7 @@ namespace Tusk.Api.Services.Implementations
             ticket.UpdatedAt = now;
             await _context.SaveChangesAsync();
 
-            return MapToDto(ticket);
+            return await ProjectTicketAsync(ticket.Id);
         }
 
         public async Task<TicketDto?> ReopenTicketAsync(int projectId, int ticketId)
@@ -223,7 +232,7 @@ namespace Tusk.Api.Services.Implementations
             ticket.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return MapToDto(ticket);
+            return await ProjectTicketAsync(ticket.Id);
         }
 
         public async Task<PagedResultDto<TicketDto>> GetMyTicketsAsync(string userId, TicketQueryParams query)
